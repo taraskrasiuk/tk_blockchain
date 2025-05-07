@@ -2,6 +2,7 @@ package state
 
 import (
 	"bufio"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,7 +27,8 @@ type State struct {
 	Balances  map[transactions.Account]uint
 	txMempool []transactions.Tx
 
-	dbFile *os.File
+	dbFile   *os.File
+	snapshot [32]byte
 }
 
 func (s *State) Close() {
@@ -137,7 +139,7 @@ func (s *State) apply(tx transactions.Tx) error {
 }
 
 // Persistent
-func (s *State) Persist() error {
+func (s *State) Persist() (Snapshot, error) {
 	// copy mempool
 	mempool := make([]transactions.Tx, len(s.txMempool))
 	copy(mempool, s.txMempool)
@@ -145,14 +147,43 @@ func (s *State) Persist() error {
 	for i := 0; i < len(mempool); i++ {
 		txJson, err := json.Marshal(mempool[i])
 		if err != nil {
-			return err
+			return Snapshot{}, err
 		}
 
 		if _, err := s.dbFile.Write(append(txJson, '\n')); err != nil {
 			fmt.Println(err)
-			return err
+			return Snapshot{}, err
 		}
+		// create a snaphost sha256.Sum256
+		err = s.doSnapshot()
+		if err != nil {
+			return Snapshot{}, err
+		}
+
 		s.txMempool = s.txMempool[1:]
 	}
+
+	return s.snapshot, nil
+}
+
+// Snapshot
+type Snapshot [32]byte
+
+func (s *State) doSnapshot() error {
+	_, err := s.dbFile.Seek(0, 0)
+	if err != nil {
+		return err
+	}
+	data, err := io.ReadAll(s.dbFile)
+	if err != nil {
+		return err
+	}
+
+	s.snapshot = sha256.Sum256(data)
 	return nil
+}
+
+func (s *State) GetVersion() string {
+	fmt.Println(s.snapshot)
+	return fmt.Sprintf("%x", s.snapshot)
 }

@@ -46,11 +46,12 @@ func txAddCmd() *cobra.Command {
 				return
 			}
 			// save updated state back to file
-			err = s.Persist()
+			snapshot, err := s.Persist()
 			if err != nil {
 				log.Fatal(err)
 				return
 			}
+			fmt.Printf("Snapshot: %x\n", snapshot)
 		},
 	}
 	cmd.Flags().String("from", "", "from what account to perform the transaction")
