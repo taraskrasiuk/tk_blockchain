@@ -9,5 +9,4 @@ func main() {
 	st := state.NewState()
 
 	fmt.Println(st.Balances)
-	fmt.Println(st.TxMempool)
 }

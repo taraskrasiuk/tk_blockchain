@@ -23,7 +23,7 @@ type genesisResource struct {
 type State struct {
 	// all balances
 	Balances  map[transactions.Account]uint
-	TxMempool []transactions.Tx
+	txMempool []transactions.Tx
 
 	dbFile *os.File
 }
@@ -97,7 +97,7 @@ func (s *State) loadTransactions() error {
 		if err != nil {
 			return err
 		}
-		s.TxMempool = append(s.TxMempool, tx)
+		s.txMempool = append(s.txMempool, tx)
 	}
 	if scanner.Err() != nil {
 		return scanner.Err()
@@ -106,14 +106,42 @@ func (s *State) loadTransactions() error {
 	return nil
 }
 
+func (s *State) Add(tx transactions.Tx) error {
+	if err := s.apply(tx); err != nil {
+		return err
+	}
+	s.txMempool = append(s.txMempool, tx)
+	return nil
+}
+
 func (s *State) apply(tx transactions.Tx) error {
 	if tx.IsReward() {
 		s.Balances[tx.To] += tx.Value
+		return nil
 	}
 	if s.Balances[tx.From] < tx.Value {
 		return errors.New("cannot perform transaction due to insufficient balance")
 	}
 	s.Balances[tx.From] -= tx.Value
 	s.Balances[tx.To] += tx.Value
+	return nil
+}
+
+// Persistent
+func (s *State) Persist() error {
+	// copy mempool
+	mempool := make([]transactions.Tx, len(s.txMempool))
+	copy(mempool, s.txMempool)
+
+	for i := 0; i < len(mempool); i++ {
+		txJson, err := json.Marshal(mempool[i])
+		if err != nil {
+			return err
+		}
+		if _, err := s.dbFile.Write(append(txJson, '\n')); err != nil {
+			return err
+		}
+		s.txMempool = s.txMempool[1:]
+	}
 	return nil
 }
