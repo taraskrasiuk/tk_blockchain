@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"taraskrasiuk/blockchain_l/internal/transactions"
@@ -26,6 +27,10 @@ type State struct {
 	txMempool []transactions.Tx
 
 	dbFile *os.File
+}
+
+func (s *State) Close() {
+	defer s.dbFile.Close()
 }
 
 func NewState() *State {
@@ -73,7 +78,7 @@ func (s *State) loadGenesisFile() error {
 
 // load transactions file
 func (s *State) loadTransactions() error {
-	f, err := os.OpenFile(transactionsFileDb, os.O_RDONLY, 0600)
+	f, err := os.OpenFile(transactionsFileDb, os.O_APPEND|os.O_RDWR, 0600)
 	if err != nil {
 		return err
 	}
@@ -93,11 +98,9 @@ func (s *State) loadTransactions() error {
 		}
 
 		// apply transaction
-		err = s.apply(tx)
-		if err != nil {
+		if err := s.apply(tx); err != nil {
 			return err
 		}
-		s.txMempool = append(s.txMempool, tx)
 	}
 	if scanner.Err() != nil {
 		return scanner.Err()
@@ -119,11 +122,17 @@ func (s *State) apply(tx transactions.Tx) error {
 		s.Balances[tx.To] += tx.Value
 		return nil
 	}
+
 	if s.Balances[tx.From] < tx.Value {
 		return errors.New("cannot perform transaction due to insufficient balance")
 	}
 	s.Balances[tx.From] -= tx.Value
+
+	if _, ok := s.Balances[tx.To]; !ok {
+		s.Balances[tx.To] = 0
+	}
 	s.Balances[tx.To] += tx.Value
+
 	return nil
 }
 
@@ -138,7 +147,9 @@ func (s *State) Persist() error {
 		if err != nil {
 			return err
 		}
+
 		if _, err := s.dbFile.Write(append(txJson, '\n')); err != nil {
+			fmt.Println(err)
 			return err
 		}
 		s.txMempool = s.txMempool[1:]
