@@ -46,7 +46,7 @@ func txAddCmd() *cobra.Command {
 				return
 			}
 			// save updated state back to file
-			snapshot, err := s.Persist()
+			snapshot, err := s.PersistV2()
 			if err != nil {
 				log.Fatal(err)
 				return
