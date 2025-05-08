@@ -40,17 +40,17 @@ func NewState(dirname string) *State {
 		log.Fatal(err)
 	}
 
-	if err := s.loadGenesisFile(); err != nil {
+	if err := s.loadGenesisFile(dirname); err != nil {
 		log.Fatal(err)
 	}
-	if err := s.loadBlocksFile(); err != nil {
+	if err := s.loadBlocksFile(dirname); err != nil {
 		log.Fatal(err)
 	}
 	return s
 }
 
-func (s *State) loadBlocksFile() error {
-	f, err := os.OpenFile(blocksFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+func (s *State) loadBlocksFile(dirname string) error {
+	f, err := os.OpenFile(getBlocksDbFile(dirname), os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {
 		return err
 	}
@@ -80,8 +80,8 @@ func (s *State) loadBlocksFile() error {
 }
 
 // Load genesis file
-func (s *State) loadGenesisFile() error {
-	f, err := os.OpenFile(genesisFile, os.O_RDONLY, 0600)
+func (s *State) loadGenesisFile(dirname string) error {
+	f, err := os.OpenFile(getGenesisFile(dirname), os.O_RDONLY, 0600)
 	if err != nil {
 		return err
 	}

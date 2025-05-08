@@ -8,7 +8,7 @@ import (
 )
 
 var (
-	genesisFile = "genesis.db"
+	genesisFile = "genesis.json"
 	blocksFile  = "blocks.db"
 )
 
@@ -17,17 +17,17 @@ func initDbDirStructureIfNotExist(dirname string) error {
 	if fileExists(getGenesisFile(dirname)) {
 		return nil
 	}
-	path := getDbDir(dirname)
+
 	// create subdirectory
-	if err := os.Mkdir(path, os.ModePerm); err != nil {
+	if err := os.MkdirAll(getDbDir(dirname), os.ModePerm); err != nil {
 		return err
 	}
 	// create geneis file
-	if err := writeGenesisFile(path); err != nil {
+	if err := writeGenesisFile(dirname); err != nil {
 		return err
 	}
 	// create blocks db
-	if err := writeBlocksDbFile(path); err != nil {
+	if err := writeBlocksDbFile(dirname); err != nil {
 		return err
 	}
 	return nil
@@ -38,7 +38,7 @@ func getDbDir(dirname string) string {
 }
 
 func getGenesisFile(dirname string) string {
-	return filepath.Join(dirname, genesisFile)
+	return filepath.Join(getDbDir(dirname), genesisFile)
 }
 
 func writeGenesisFile(dirname string) error {
@@ -57,11 +57,11 @@ func writeGenesisFile(dirname string) error {
 }
 
 func getBlocksDbFile(dirname string) string {
-	return filepath.Join(dirname, "blocks.db")
+	return filepath.Join(getDbDir(dirname), blocksFile)
 }
 
 func writeBlocksDbFile(dirname string) error {
-	if err := os.WriteFile(filepath.Join(dirname, blocksFile), []byte{}, os.ModePerm); err != nil {
+	if err := os.WriteFile(getBlocksDbFile(dirname), []byte{}, os.ModePerm); err != nil {
 		return err
 	}
 	return nil
