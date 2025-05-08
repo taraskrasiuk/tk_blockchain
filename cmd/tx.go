@@ -1,4 +1,4 @@
-package tx
+package cmd
 
 import (
 	"fmt"
@@ -10,6 +10,11 @@ import (
 )
 
 func txAddCmd() *cobra.Command {
+	var txCmd = &cobra.Command{
+		Use:   "tx",
+		Short: "Transaction commands ( add )",
+	}
+
 	var cmd = &cobra.Command{
 		Use:   "add",
 		Short: "Add transaction",
@@ -63,5 +68,9 @@ func txAddCmd() *cobra.Command {
 	cmd.MarkFlagRequired("value")
 	cmd.Flags().String("data", "", "data to send. Only 1 available option, is 'reward'.")
 
-	return cmd
+	addRequiredArg(cmd)
+
+	txCmd.AddCommand(cmd)
+
+	return txCmd
 }

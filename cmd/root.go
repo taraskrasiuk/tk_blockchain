@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"os"
-	"taraskrasiuk/blockchain_l/cmd/tx"
 
 	"github.com/spf13/cobra"
 )
@@ -22,6 +21,5 @@ func Execute() {
 func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(addBalancesListCmd())
-	rootCmd.AddCommand(tx.TxsCmd)
-	addRequiredArg(tx.TxsCmd)
+	rootCmd.AddCommand(txAddCmd())
 }
