@@ -1,12 +1,23 @@
 package state
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"os"
 	"taraskrasiuk/blockchain_l/internal/block"
 	"taraskrasiuk/blockchain_l/internal/transactions"
 	"testing"
 )
+
+func f() (cancel func()) {
+	_, cancel = context.WithCancel(context.TODO())
+	cancel2 := func() {
+		cancel()
+		fmt.Println("canceled")
+	}
+	return cancel2
+}
 
 var testDbDir = "test-dir"
 
@@ -51,7 +62,7 @@ func setup() error {
 	genesisFile = "utest_" + genesisFile
 	blocksFile = "utest_" + blocksFile
 
-	s := NewState(testDbDir)
+	s, _ := NewState(testDbDir)
 	block0 := block.NewBlock(block.Hash{}, []transactions.Tx{
 		*transactions.NewTx(transactions.Account("andrej"), transactions.Account("andrej"), "", 3),
 		*transactions.NewTx(transactions.Account("andrej"), transactions.Account("andrej"), "reward", 700),
@@ -98,7 +109,7 @@ func TestState(t *testing.T) {
 		}
 	}()
 
-	state := NewState(testDbDir)
+	state, _ := NewState(testDbDir)
 
 	expectedBalance := 1000151
 	if state.Balances["andrej"] != uint(expectedBalance) {

@@ -41,13 +41,16 @@ func txAddCmd() *cobra.Command {
 
 			tx := transactions.NewTx(fromAcc, toAcc, data, value)
 
-			s := state.NewState(dirname)
+			s, err := state.NewState(dirname)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
 			defer s.Close()
 
 			// TODO: probably need to change the method to apply the pointer
 			// in order to avoid copying the values
-			err := s.Add(*tx)
-			if err != nil {
+			if err := s.Add(*tx); err != nil {
 				log.Fatal(err)
 				return
 			}

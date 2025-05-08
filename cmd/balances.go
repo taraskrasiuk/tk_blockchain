@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"taraskrasiuk/blockchain_l/internal/state"
 
@@ -16,7 +17,11 @@ func addBalancesListCmd() *cobra.Command {
 			var (
 				dirname, _ = cmd.Flags().GetString("dir")
 			)
-			s := state.NewState(dirname)
+			s, err := state.NewState(dirname)
+			if err != nil {
+				log.Fatal(err)
+				return
+			}
 			defer s.Close()
 
 			res := fmt.Sprintf("Account balances at: %s\n", s.GetVersion())

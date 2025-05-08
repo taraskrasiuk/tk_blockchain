@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"log"
 	"os"
 	"taraskrasiuk/blockchain_l/internal/block"
 	"taraskrasiuk/blockchain_l/internal/transactions"
@@ -31,22 +30,22 @@ func (s *State) Close() {
 	defer s.blockFile.Close()
 }
 
-func NewState(dirname string) *State {
-	s := &State{
+func NewState(dirname string) (*State, error) {
+	s := State{
 		Balances: make(map[transactions.Account]uint),
 	}
 
 	if err := initDbDirStructureIfNotExist(dirname); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	if err := s.loadGenesisFile(dirname); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 	if err := s.loadBlocksFile(dirname); err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
-	return s
+	return &s, nil
 }
 
 func (s *State) loadBlocksFile(dirname string) error {

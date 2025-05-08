@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	s := state.NewState("")
+	s, _ := state.NewState("")
 	defer s.Close()
 
 	block0 := block.NewBlock(block.Hash{}, []transactions.Tx{

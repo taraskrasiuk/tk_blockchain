@@ -22,4 +22,5 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(addBalancesListCmd())
 	rootCmd.AddCommand(txAddCmd())
+	rootCmd.AddCommand(addRunCmd())
 }
