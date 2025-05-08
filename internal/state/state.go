@@ -12,12 +12,6 @@ import (
 	"taraskrasiuk/blockchain_l/internal/transactions"
 )
 
-var (
-	genesisFileDb      = "genesis.db"
-	transactionsFileDb = "tx.db"
-	blocksFileDb       = "blocks.db"
-)
-
 type genesisResource struct {
 	GenesisTime string `json:"genesis_time"`
 	ChainID     string `json:"chain_id"`
@@ -29,39 +23,34 @@ type State struct {
 	Balances  map[transactions.Account]uint
 	txMempool []transactions.Tx
 
-	dbFile *os.File
-
-	blockFile *os.File
-	snapshot  [32]byte
-
+	blockFile     *os.File
 	LastBlockHash block.Hash
 }
 
 func (s *State) Close() {
-	defer s.dbFile.Close()
 	defer s.blockFile.Close()
 }
 
-func NewState() *State {
+func NewState(dirname string) *State {
 	s := &State{
 		Balances: make(map[transactions.Account]uint),
 	}
 
-	err := s.loadGenesisFile()
-	if err != nil {
+	if err := initDbDirStructureIfNotExist(dirname); err != nil {
 		log.Fatal(err)
 	}
-	// s.loadTransactions()
-	err = s.loadBlocksFile()
-	if err != nil {
+
+	if err := s.loadGenesisFile(); err != nil {
+		log.Fatal(err)
+	}
+	if err := s.loadBlocksFile(); err != nil {
 		log.Fatal(err)
 	}
 	return s
 }
 
-// // load block file
 func (s *State) loadBlocksFile() error {
-	f, err := os.OpenFile(blocksFileDb, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
+	f, err := os.OpenFile(blocksFile, os.O_CREATE|os.O_APPEND|os.O_RDWR, 0644)
 	if err != nil {
 		return err
 	}
@@ -92,7 +81,7 @@ func (s *State) loadBlocksFile() error {
 
 // Load genesis file
 func (s *State) loadGenesisFile() error {
-	f, err := os.OpenFile(genesisFileDb, os.O_RDONLY, 0600)
+	f, err := os.OpenFile(genesisFile, os.O_RDONLY, 0600)
 	if err != nil {
 		return err
 	}
@@ -118,39 +107,6 @@ func (s *State) loadGenesisFile() error {
 	// set a balances to state
 	for k, v := range genesisData.Balances {
 		s.Balances[transactions.Account(k)] = v
-	}
-
-	return nil
-}
-
-// load transactions file
-func (s *State) loadTransactions() error {
-	f, err := os.OpenFile(transactionsFileDb, os.O_APPEND|os.O_RDWR, 0600)
-	if err != nil {
-		return err
-	}
-	// dont close the file
-	// defer f.Close()
-
-	// save file ref to state
-	s.dbFile = f
-
-	scanner := bufio.NewScanner(f)
-	scanner.Split(bufio.ScanLines)
-	for scanner.Scan() {
-		var tx transactions.Tx
-		err := json.Unmarshal(scanner.Bytes(), &tx)
-		if err != nil {
-			return err
-		}
-
-		// apply transaction
-		if err := s.apply(tx); err != nil {
-			return err
-		}
-	}
-	if scanner.Err() != nil {
-		return scanner.Err()
 	}
 
 	return nil
@@ -194,7 +150,7 @@ func (s *State) apply(tx transactions.Tx) error {
 	return nil
 }
 
-func (s *State) PersistV2() (block.Hash, error) {
+func (s *State) Persist() (block.Hash, error) {
 	// create a new block, and set a parent block's hash
 	b := block.NewBlock(s.LastBlockHash, s.txMempool)
 	bhash, err := b.Hash()

@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	s := state.NewState()
+	s := state.NewState("")
 	defer s.Close()
 
 	block0 := block.NewBlock(block.Hash{}, []transactions.Tx{
@@ -19,7 +19,7 @@ func main() {
 
 	s.AddBlock(block0)
 
-	block0Hash, err := s.PersistV2()
+	block0Hash, err := s.Persist()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func main() {
 
 	s.AddBlock(block1)
 
-	block1Hash, err := s.PersistV2()
+	block1Hash, err := s.Persist()
 	if err != nil {
 		log.Fatal(err)
 	}

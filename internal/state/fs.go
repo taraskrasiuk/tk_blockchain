@@ -61,7 +61,7 @@ func getBlocksDbFile(dirname string) string {
 }
 
 func writeBlocksDbFile(dirname string) error {
-	if err := os.WriteFile(filepath.Join(dirname, blocksFileDb), []byte{}, os.ModePerm); err != nil {
+	if err := os.WriteFile(filepath.Join(dirname, blocksFile), []byte{}, os.ModePerm); err != nil {
 		return err
 	}
 	return nil

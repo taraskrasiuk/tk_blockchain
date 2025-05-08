@@ -19,10 +19,11 @@ func txAddCmd() *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			var (
 				// ignore errors
-				from, _  = cmd.Flags().GetString("from")
-				to, _    = cmd.Flags().GetString("to")
-				value, _ = cmd.Flags().GetUint("value")
-				data, _  = cmd.Flags().GetString("data")
+				dirname, _ = cmd.Flags().GetString("dir")
+				from, _    = cmd.Flags().GetString("from")
+				to, _      = cmd.Flags().GetString("to")
+				value, _   = cmd.Flags().GetUint("value")
+				data, _    = cmd.Flags().GetString("data")
 			)
 
 			// create an accounts
@@ -35,7 +36,7 @@ func txAddCmd() *cobra.Command {
 
 			tx := transactions.NewTx(fromAcc, toAcc, data, value)
 
-			s := state.NewState()
+			s := state.NewState(dirname)
 			defer s.Close()
 
 			// TODO: probably need to change the method to apply the pointer
@@ -46,7 +47,7 @@ func txAddCmd() *cobra.Command {
 				return
 			}
 			// save updated state back to file
-			snapshot, err := s.PersistV2()
+			snapshot, err := s.Persist()
 			if err != nil {
 				log.Fatal(err)
 				return

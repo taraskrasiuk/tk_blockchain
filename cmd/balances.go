@@ -13,7 +13,10 @@ func addBalancesListCmd() *cobra.Command {
 		Use:   "list",
 		Short: "Balances",
 		Run: func(cmd *cobra.Command, args []string) {
-			s := state.NewState()
+			var (
+				dirname, _ = cmd.Flags().GetString("dir")
+			)
+			s := state.NewState(dirname)
 			defer s.Close()
 
 			res := fmt.Sprintf("Account balances at: %s\n", s.GetVersion())

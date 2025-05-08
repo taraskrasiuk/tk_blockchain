@@ -48,14 +48,14 @@ func setupMockTxDBFile(filename string) error {
 
 func setup() error {
 	// change original filenames which state uses
-	genesisFileDb = "utest_" + genesisFileDb
-	transactionsFileDb = "utest_" + transactionsFileDb
+	genesisFile = "utest_" + genesisFile
+	blocksFile = "utest_" +blocksFile 
 
-	err := setupMockGenesisDBFile(genesisFileDb)
+	err := setupMockGenesisDBFile(genesisFile)
 	if err != nil {
 		return err
 	}
-	err = setupMockTxDBFile(transactionsFileDb)
+	err = setupMockTxDBFile(blocksFile)
 	if err != nil {
 		return err
 	}
@@ -63,11 +63,11 @@ func setup() error {
 }
 
 func cleanup() error {
-	err := os.Remove(genesisFileDb)
+	err := os.Remove(genesisFile)
 	if err != nil {
 		return err
 	}
-	err = os.Remove(transactionsFileDb)
+	err = os.Remove(blocksFile)
 	if err != nil {
 		return err
 	}
@@ -81,7 +81,7 @@ func TestState(t *testing.T) {
 	}
 	defer cleanup()
 
-	state := NewState()
+	state := NewState("")
 
 	expectedBalance := 998801
 	if state.Balances["andrej"] != uint(expectedBalance) {
