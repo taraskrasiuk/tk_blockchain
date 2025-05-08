@@ -8,19 +8,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var balancesListCmd = &cobra.Command{
-	Use:   "list",
-	Short: "Balances",
-	Run: func(cmd *cobra.Command, args []string) {
-		s := state.NewState()
-		defer s.Close()
+func addBalancesListCmd() *cobra.Command {
+	var balancesListCmd = &cobra.Command{
+		Use:   "list",
+		Short: "Balances",
+		Run: func(cmd *cobra.Command, args []string) {
+			s := state.NewState()
+			defer s.Close()
 
-		res := fmt.Sprintf("Account balances at: %s\n", s.GetVersion())
-		for acc, val := range s.Balances {
-			res += "-----\n"
-			res += fmt.Sprintf("%s : %d\n", acc, val)
-			res += "-----\n"
-		}
-		fmt.Fprintf(os.Stdout, res)
-	},
+			res := fmt.Sprintf("Account balances at: %s\n", s.GetVersion())
+			for acc, val := range s.Balances {
+				res += "-----\n"
+				res += fmt.Sprintf("%s : %d\n", acc, val)
+				res += "-----\n"
+			}
+			fmt.Fprintf(os.Stdout, res)
+		},
+	}
+
+	addRequiredArg(balancesListCmd)
+
+	return balancesListCmd
 }

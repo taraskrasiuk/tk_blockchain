@@ -21,6 +21,7 @@ func Execute() {
 
 func init() {
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(balancesListCmd)
+	rootCmd.AddCommand(addBalancesListCmd())
 	rootCmd.AddCommand(tx.TxsCmd)
+	addRequiredArg(tx.TxsCmd)
 }
