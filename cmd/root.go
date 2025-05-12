@@ -23,4 +23,6 @@ func init() {
 	rootCmd.AddCommand(addBalancesListCmd())
 	rootCmd.AddCommand(txAddCmd())
 	rootCmd.AddCommand(addRunCmd())
+	rootCmd.AddCommand(addMigrationCmd())
+	rootCmd.AddCommand(addNodeCmd())
 }

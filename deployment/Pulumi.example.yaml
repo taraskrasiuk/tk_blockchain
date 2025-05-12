@@ -1,0 +1,8 @@
+encryptionsalt: v1:Ps3H+HYgSCw=:v1:tK4SKBjvsiYjKMf7:R0i+LD9M1Qba0Gc9otvnq2hsPAsnEg==
+config:
+  aws:region: eu-central-1
+  aws:profile: tutor
+  app:publicKey: ""
+  app:name: ""
+# https://056285944900.signin.aws.amazon.com/console
+# lozDbr5^

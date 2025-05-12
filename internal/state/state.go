@@ -2,7 +2,6 @@ package state
 
 import (
 	"bufio"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"io"
@@ -23,7 +22,8 @@ type State struct {
 	txMempool []transactions.Tx
 
 	blockFile     *os.File
-	LastBlockHash block.Hash
+	lastBlock     block.Block
+	lastBlockHash block.Hash
 }
 
 func (s *State) Close() {
@@ -68,7 +68,8 @@ func (s *State) loadBlocksFile(dirname string) error {
 				return err
 			}
 		}
-		s.LastBlockHash = blockFS.Key
+		s.lastBlock = blockFS.Value
+		s.lastBlockHash = blockFS.Key
 	}
 
 	if scanner.Err() != nil {
@@ -151,7 +152,7 @@ func (s *State) apply(tx transactions.Tx) error {
 
 func (s *State) Persist() (block.Hash, error) {
 	// create a new block, and set a parent block's hash
-	b := block.NewBlock(s.LastBlockHash, s.txMempool)
+	b := block.NewBlock(s.lastBlockHash, s.lastBlock.Header.Number+1, s.txMempool)
 	bhash, err := b.Hash()
 	if err != nil {
 		return block.Hash{}, err
@@ -170,11 +171,16 @@ func (s *State) Persist() (block.Hash, error) {
 		return block.Hash{}, err
 	}
 
-	s.LastBlockHash = bhash
+	s.lastBlockHash = bhash
+	s.lastBlock = blockFs.Value
 
 	return bhash, nil
 }
 
-func (s *State) GetVersion() string {
-	return hex.EncodeToString(s.LastBlockHash[:])
+func (s *State) GetLastHash() *block.Hash {
+	return &s.lastBlockHash
+}
+
+func (s *State) GetLastBlock() *block.Block {
+	return &s.lastBlock
 }

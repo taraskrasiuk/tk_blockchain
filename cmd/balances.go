@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"os"
@@ -24,7 +25,7 @@ func addBalancesListCmd() *cobra.Command {
 			}
 			defer s.Close()
 
-			res := fmt.Sprintf("Account balances at: %s\n", s.GetVersion())
+			res := fmt.Sprintf("Account balances at: %s\n", hex.EncodeToString([]byte(s.GetLastHash()[:])))
 			for acc, val := range s.Balances {
 				res += "-----\n"
 				res += fmt.Sprintf("%s : %d\n", acc, val)

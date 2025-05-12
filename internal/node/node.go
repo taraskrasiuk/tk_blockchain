@@ -25,7 +25,7 @@ func NewHttpNodeHanlder(s *state.State) *HttpNodeHandler {
 
 func (h *HttpNodeHandler) handlerBalancesList(w http.ResponseWriter, r *http.Request) {
 	balancesListResponse := BalancesListResponse{
-		Hash:     &h.s.LastBlockHash,
+		Hash:     h.s.GetLastHash(),
 		Balances: h.s.Balances,
 	}
 
@@ -110,11 +110,16 @@ func Run(datadir string) error {
 	mux := http.NewServeMux()
 	nodeHandler := NewHttpNodeHanlder(s)
 
+	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("status: OK"))
+	})
+
 	mux.HandleFunc("GET /balances/list", nodeHandler.handlerBalancesList)
 	mux.HandleFunc("POST /tx/add", nodeHandler.handlerTxAddRequest)
 
 	fmt.Println("A node is running on port 8080")
-	if err := http.ListenAndServe("localhost:8080", mux); err != nil {
+	if err := http.ListenAndServe("0.0.0.0:8080", mux); err != nil {
 		return err
 	}
 	return nil

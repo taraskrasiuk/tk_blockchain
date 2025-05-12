@@ -29,9 +29,10 @@ type BlockFS struct {
 	Value Block `json:"block"`
 }
 
-func NewBlock(parentHash Hash, payload []transactions.Tx) Block {
+func NewBlock(parentHash Hash, num uint64, payload []transactions.Tx) Block {
 	h := BlockHeader{
 		ParentHash: parentHash,
+		Number:     num,
 		Time:       uint64(time.Now().Unix()),
 	}
 	return Block{
@@ -41,8 +42,9 @@ func NewBlock(parentHash Hash, payload []transactions.Tx) Block {
 }
 
 type BlockHeader struct {
-	ParentHash Hash
-	Time       uint64
+	ParentHash Hash   `json:"parentHash"`
+	Number     uint64 `json:"number"`
+	Time       uint64 `json:"time"`
 }
 
 func (b Block) Hash() (Hash, error) {

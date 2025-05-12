@@ -1,4 +1,4 @@
-package cmd 
+package cmd
 
 import (
 	"fmt"
@@ -8,8 +8,8 @@ import (
 
 const (
 	Major  = "0"
-	Minor  = "0"
-	Patch  = "1"
+	Minor  = "1"
+	Patch  = "0"
 	Verbal = "TX Add & Balances list"
 )
 

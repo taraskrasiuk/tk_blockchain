@@ -63,7 +63,7 @@ func setup() error {
 	blocksFile = "utest_" + blocksFile
 
 	s, _ := NewState(testDbDir)
-	block0 := block.NewBlock(block.Hash{}, []transactions.Tx{
+	block0 := block.NewBlock(block.Hash{}, 1, []transactions.Tx{
 		*transactions.NewTx(transactions.Account("andrej"), transactions.Account("andrej"), "", 3),
 		*transactions.NewTx(transactions.Account("andrej"), transactions.Account("andrej"), "reward", 700),
 	})
@@ -72,7 +72,7 @@ func setup() error {
 	if err != nil {
 		log.Fatal(err)
 	}
-	block1 := block.NewBlock(block0Hash, []transactions.Tx{
+	block1 := block.NewBlock(block0Hash, 2, []transactions.Tx{
 		*transactions.NewTx("andrej", "babayaga", "", 2000),
 		*transactions.NewTx("andrej", "andrej", "reward", 100),
 		*transactions.NewTx("babayaga", "andrej", "", 1),
