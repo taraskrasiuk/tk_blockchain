@@ -1,6 +1,7 @@
 package node
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -30,6 +31,22 @@ func (h *HttpNodeHandler) handlerBalancesList(w http.ResponseWriter, r *http.Req
 	}
 
 	if err := writeJSON(w, http.StatusOK, balancesListResponse); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("internal error"))
+	}
+}
+
+type NodeStatusResponse struct {
+	BlockHash   string `json:"block_hash"`
+	BlockNumber uint64 `json:"block_number"`
+}
+
+func (h *HttpNodeHandler) handlerNodeStatus(w http.ResponseWriter, r *http.Request) {
+	nodeResp := &NodeStatusResponse{
+		BlockHash:   hex.EncodeToString(h.s.GetLastHash()[:]),
+		BlockNumber: h.s.GetLastBlock().Header.Number,
+	}
+	if err := writeJSON(w, http.StatusOK, nodeResp); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("internal error"))
 	}
@@ -117,6 +134,7 @@ func Run(datadir string) error {
 
 	mux.HandleFunc("GET /balances/list", nodeHandler.handlerBalancesList)
 	mux.HandleFunc("POST /tx/add", nodeHandler.handlerTxAddRequest)
+	mux.HandleFunc("GET /node/status", nodeHandler.handlerNodeStatus)
 
 	fmt.Println("A node is running on port 8080")
 	if err := http.ListenAndServe("0.0.0.0:8080", mux); err != nil {
