@@ -3,10 +3,10 @@ package state
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"taraskrasiuk/blockchain_l/internal/block"
 	"taraskrasiuk/blockchain_l/internal/transactions"
 )
@@ -22,18 +22,20 @@ type State struct {
 	Balances  map[transactions.Account]uint
 	txMempool []transactions.Tx
 
-	blockFile     *os.File
-	lastBlock     block.Block
-	lastBlockHash block.Hash
+	blockFile       *os.File
+	lastBlock       block.Block
+	lastBlockHash   block.Hash
+	hasGenesisBlock bool
 }
 
 func (s *State) Close() {
 	defer s.blockFile.Close()
 }
 
-func NewState(dirname string) (*State, error) {
+func NewState(dirname string, hasGenesisBlock bool) (*State, error) {
 	s := State{
-		Balances: make(map[transactions.Account]uint),
+		Balances:        make(map[transactions.Account]uint),
+		hasGenesisBlock: hasGenesisBlock,
 	}
 
 	if err := initDbDirStructureIfNotExist(dirname); err != nil {
@@ -64,11 +66,12 @@ func (s *State) loadBlocksFile(dirname string) error {
 		if err := json.Unmarshal(scanner.Bytes(), &blockFS); err != nil {
 			return err
 		}
-		for _, tx := range blockFS.Value.Payload {
-			if err := s.apply(tx); err != nil {
-				return err
-			}
-		}
+		applyBlock(blockFS.Value, s)
+		// for _, tx := range blockFS.Value.Payload {
+		// 	if err := s.apply(tx); err != nil {
+		// 		return err
+		// 	}
+		// }
 		s.lastBlock = blockFS.Value
 		s.lastBlockHash = blockFS.Key
 	}
@@ -114,7 +117,7 @@ func (s *State) loadGenesisFile(dirname string) error {
 }
 
 func (s *State) Add(tx transactions.Tx) error {
-	if err := s.apply(tx); err != nil {
+	if err := applyTx(tx, s); err != nil {
 		return err
 	}
 	s.txMempool = append(s.txMempool, tx)
@@ -125,7 +128,7 @@ func (s *State) AddBlock(b block.Block) (block.Hash, error) {
 	// make a temporary copy of the state, in order to avoid race conditions
 	pendingState := s.copy()
 	// apply a block to pending state
-	if err := applyBlock(b, pendingState); err != nil {
+	if err := applyBlock(b, &pendingState); err != nil {
 		return block.Hash{}, err
 	}
 	// get a block hash
@@ -171,9 +174,23 @@ func (s *State) copy() State {
 }
 
 // Add block to state, and apply all block's transactions to the current state txMempool.
-func applyBlock(b block.Block, s State) error {
-	for _, tx := range b.Payload {
-		if err := s.apply(tx); err != nil {
+func applyBlock(b block.Block, s *State) error {
+	nextExpectedBlockNumber := s.lastBlock.Header.Number + 1
+
+	// validate for expected next block number. The height should be equal to state last block's number + 1.
+	if s.hasGenesisBlock && b.Header.Number != nextExpectedBlockNumber {
+		return fmt.Errorf("the next block number is incorrect, expected to be %d got %d", nextExpectedBlockNumber, b.Header.Number)
+	}
+	// validate that next block parent hash equals to state last block hash.
+	if s.hasGenesisBlock && s.lastBlock.Header.Number > 0 && !reflect.DeepEqual(b.Header.ParentHash, s.lastBlockHash) {
+		return fmt.Errorf("the next block parent hash is incorrect, expected to be %x got %x", s.lastBlockHash, b.Header.ParentHash)
+	}
+	return applyTXs(b.Payload, s)
+}
+
+func applyTXs(txs []transactions.Tx, s *State) error {
+	for _, tx := range txs {
+		if err := applyTx(tx, s); err != nil {
 			return err
 		}
 		s.txMempool = append(s.txMempool, tx)
@@ -181,14 +198,14 @@ func applyBlock(b block.Block, s State) error {
 	return nil
 }
 
-func (s *State) apply(tx transactions.Tx) error {
+func applyTx(tx transactions.Tx, s *State) error {
 	if tx.IsReward() {
 		s.Balances[tx.To] += tx.Value
 		return nil
 	}
 
 	if s.Balances[tx.From] < tx.Value {
-		return errors.New("cannot perform transaction due to insufficient balance")
+		return fmt.Errorf("wrong TX, cant perform transaction. \n From: %s, To: %s, Value: %d \n", tx.From, tx.To, tx.Value)
 	}
 	s.Balances[tx.From] -= tx.Value
 
@@ -199,6 +216,25 @@ func (s *State) apply(tx transactions.Tx) error {
 
 	return nil
 }
+
+// func (s *State) apply(tx transactions.Tx) error {
+// 	if tx.IsReward() {
+// 		s.Balances[tx.To] += tx.Value
+// 		return nil
+// 	}
+
+// 	if s.Balances[tx.From] < tx.Value {
+// 		return fmt.Errorf("wrong TX, cant perform transaction. \n From: %s, To: %s, Value: %d \n", tx.From, tx.To, tx.Value)
+// 	}
+// 	s.Balances[tx.From] -= tx.Value
+
+// 	if _, ok := s.Balances[tx.To]; !ok {
+// 		s.Balances[tx.To] = 0
+// 	}
+// 	s.Balances[tx.To] += tx.Value
+
+// 	return nil
+// }
 
 func (s *State) Persist() (block.Hash, error) {
 	// create a new block, and set a parent block's hash

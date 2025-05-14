@@ -41,7 +41,7 @@ func txAddCmd() *cobra.Command {
 
 			tx := transactions.NewTx(fromAcc, toAcc, data, value)
 
-			s, err := state.NewState(dirname)
+			s, err := state.NewState(dirname, true)
 			if err != nil {
 				log.Fatal(err)
 				return

@@ -18,7 +18,7 @@ func addNodeCmd() *cobra.Command {
 				dirname, _ = cmd.Flags().GetString("dir")
 			)
 
-			s, _ := state.NewState(dirname)
+			s, _ := state.NewState(dirname, true)
 			defer s.Close()
 			lastBlock := s.GetLastBlock()
 

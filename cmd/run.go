@@ -23,7 +23,7 @@ func addRunCmd() *cobra.Command {
 			isBootstrap, _ := cmd.Flags().GetBool("bootstrap")
 
 			if isBootstrap {
-				n := node.NewNode(datadir, port, nil)
+				n := node.NewNode(datadir, port, nil, true)
 				if err := n.Run(cmd.Context()); err != nil {
 					log.Fatal(err)
 					return
@@ -44,7 +44,7 @@ func addRunCmd() *cobra.Command {
 
 				fmt.Printf("successfully added the bootstrap node with ip %s and port %d \n", bootstrapIp, bootstrapPort)
 
-				n := node.NewNode(datadir, port, boostrap)
+				n := node.NewNode(datadir, port, boostrap, true)
 				if err := n.Run(cmd.Context()); err != nil {
 					log.Fatal(err)
 					return

@@ -62,7 +62,7 @@ func setup() error {
 	genesisFile = "utest_" + genesisFile
 	blocksFile = "utest_" + blocksFile
 
-	s, _ := NewState(testDbDir)
+	s, _ := NewState(testDbDir, true)
 	block0 := block.NewBlock(block.Hash{}, 1, []transactions.Tx{
 		*transactions.NewTx(transactions.Account("andrej"), transactions.Account("andrej"), "", 3),
 		*transactions.NewTx(transactions.Account("andrej"), transactions.Account("andrej"), "reward", 700),
@@ -109,7 +109,7 @@ func TestState(t *testing.T) {
 		}
 	}()
 
-	state, _ := NewState(testDbDir)
+	state, _ := NewState(testDbDir, true)
 
 	expectedBalance := 1000151
 	if state.Balances["andrej"] != uint(expectedBalance) {

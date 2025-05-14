@@ -18,7 +18,7 @@ func addBalancesListCmd() *cobra.Command {
 			var (
 				dirname, _ = cmd.Flags().GetString("dir")
 			)
-			s, err := state.NewState(dirname)
+			s, err := state.NewState(dirname, true)
 			if err != nil {
 				log.Fatal(err)
 				return

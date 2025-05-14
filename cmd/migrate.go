@@ -18,7 +18,7 @@ func addMigrationCmd() *cobra.Command {
 			var (
 				dirname, _ = cmd.Flags().GetString("dir")
 			)
-			s, _ := state.NewState(dirname)
+			s, _ := state.NewState(dirname, true)
 			defer s.Close()
 
 			block0 := block.NewBlock(block.Hash{}, 0, []transactions.Tx{

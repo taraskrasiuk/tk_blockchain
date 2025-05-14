@@ -26,10 +26,11 @@ func (p *PeerNode) TcpAddress() string {
 }
 
 type Node struct {
-	dirname    string
-	port       uint
-	state      *state.State
-	knownPeers map[string]PeerNode
+	dirname        string
+	port           uint
+	state          *state.State
+	knownPeers     map[string]PeerNode
+	hasGenesisFile bool
 }
 
 type BalancesListResponse struct {
@@ -169,21 +170,23 @@ func writeJSON(w http.ResponseWriter, statusCode int, v any) error {
 }
 
 // Node constructor
-func NewNode(datadir string, port uint, bootstrap *PeerNode) *Node {
+func NewNode(datadir string, port uint, bootstrap *PeerNode, hasGenesisFile bool) *Node {
 	if bootstrap != nil {
 		knownPeers := make(map[string]PeerNode)
 		knownPeers[bootstrap.TcpAddress()] = *bootstrap
 
 		return &Node{
-			dirname:    datadir,
-			port:       port,
-			knownPeers: knownPeers,
+			dirname:        datadir,
+			port:           port,
+			knownPeers:     knownPeers,
+			hasGenesisFile: hasGenesisFile,
 		}
 	}
 	return &Node{
-		dirname:    datadir,
-		port:       port,
-		knownPeers: make(map[string]PeerNode),
+		dirname:        datadir,
+		port:           port,
+		knownPeers:     make(map[string]PeerNode),
+		hasGenesisFile: hasGenesisFile,
 	}
 }
 
@@ -197,7 +200,7 @@ const DefaultHTTPport = 8080
 func (n *Node) Run(ctx context.Context) error {
 	fmt.Println("A node is running on port 8080")
 	// create new state
-	s, err := state.NewState(n.dirname)
+	s, err := state.NewState(n.dirname, n.hasGenesisFile)
 	if err != nil {
 		return err
 	}
@@ -227,7 +230,7 @@ func (n *Node) Run(ctx context.Context) error {
 
 // Sync logic in order to synchronized the db of the nodes.
 func (n *Node) sync(ctx context.Context) {
-	t := time.NewTicker(45 * time.Second)
+	t := time.NewTicker(5 * time.Second)
 
 	// run infinite loop
 	for {
