@@ -230,15 +230,14 @@ func (n *Node) Run(ctx context.Context) error {
 
 // Sync logic in order to synchronized the db of the nodes.
 func (n *Node) sync(ctx context.Context) {
-	t := time.NewTicker(5 * time.Second)
-
+	t := time.NewTicker(30 * time.Second)
 	// run infinite loop
 	for {
 		select {
 		case <-t.C:
 			fmt.Println("Sync time. Searching for a new blocks")
 
-			n.lookupNewBlocksAndPeers()
+			n.doSync()
 		case <-ctx.Done():
 			t.Stop()
 			return
@@ -246,54 +245,75 @@ func (n *Node) sync(ctx context.Context) {
 	}
 }
 
-func (n *Node) lookupNewBlocksAndPeers() error {
+func (n *Node) doSync() {
 	for _, peer := range n.knownPeers {
 		status, err := queryNodeStatus(&peer)
 		if err != nil {
-			fmt.Printf("got an error while looking up for a new blocks, %v\n", err)
-			continue
+			fmt.Printf("doSync() queryNodeStatus error occured %v\n", err)
 		}
-		jsonStatus, _ := json.MarshalIndent(status, "", "  ")
-		fmt.Printf("Got a status from nodepeer tcp: %s, and a status:\n %s\n", peer.TcpAddress(), jsonStatus)
-		localBlockNumber := n.state.GetLastBlock().Header.Number
-		if localBlockNumber < status.BlockNumber {
-			// _ := status.BlockNumber - localBlockNumber
-			newBlocks, err := queryNodeBlocks(*n.state.GetLastHash(), &peer)
-			if err != nil {
-				fmt.Printf("got an error while trying to get the new blocks, %v\n", err)
-				continue
-			}
-			fmt.Println("found new blocks")
-			for _, newBlock := range newBlocks.Blocks {
-				n.state.AddBlock(newBlock)
-			}
+		err = n.syncBlocks(peer, status)
+		if err != nil {
+			fmt.Printf("doSync() syncBlocks error occured %v\n", err)
 		}
-
-		for _, statusPeer := range status.KnownPeers {
-			newPeer, isKnowPeer := n.knownPeers[statusPeer.TcpAddress()]
-			if !isKnowPeer {
-				fmt.Printf("Found a new peer %s\n", newPeer.IP)
-
-				n.knownPeers[newPeer.TcpAddress()] = newPeer
-			}
+		err = n.syncPeers(status)
+		if err != nil {
+			fmt.Printf("doSync() syncPeers error occured %v\n", err)
 		}
 	}
+}
 
+func (n *Node) IsKnownPeer(p *PeerNode) bool {
+	_, isKnownPeer := n.knownPeers[p.TcpAddress()]
+	return isKnownPeer
+}
+
+func (n *Node) AddPeer(p *PeerNode) {
+	n.knownPeers[p.TcpAddress()] = *p
+}
+
+func (n *Node) syncPeers(status NodeStatusResponse) error {
+	for _, statusPeer := range status.KnownPeers {
+		if !n.IsKnownPeer(&statusPeer) {
+			fmt.Printf("Found new Peer %s\n", statusPeer.TcpAddress())
+			n.AddPeer(&statusPeer)
+		}
+	}
+	return nil
+}
+
+func (n *Node) syncBlocks(p PeerNode, status NodeStatusResponse) error {
+	localBlockNumber := n.state.GetLastBlock().Header.Number
+	if localBlockNumber < status.BlockNumber {
+		// _ := status.BlockNumber - localBlockNumber
+		newBlocks, err := queryNodeBlocks(*n.state.GetLastHash(), &p)
+		if err != nil {
+			return fmt.Errorf("got an error while trying to get the new blocks, %v\n", err)
+		}
+		for _, newBlock := range newBlocks.Blocks {
+			n.state.AddBlock(newBlock)
+		}
+		fmt.Println("done syncing blocks")
+	}
 	return nil
 }
 
 // HTTP request in order to get the peer node status
 func queryNodeStatus(p *PeerNode) (NodeStatusResponse, error) {
 	// TODO: remove the http
-	response, err := http.Get(fmt.Sprintf("http://%s/node/status", p.TcpAddress()))
+	url := fmt.Sprintf("http://%s/node/status", p.TcpAddress())
+	fmt.Printf("queryNodeStatus() for %s", url)
+	response, err := http.Get(url)
 	if err != nil {
 		return NodeStatusResponse{}, err
 	}
 	defer response.Body.Close()
+
 	var statusResp NodeStatusResponse
 	if err := json.NewDecoder(response.Body).Decode(&statusResp); err != nil {
 		return NodeStatusResponse{}, err
 	}
+	jsonStatus, _ := json.MarshalIndent(statusResp, "", "  ")
+	fmt.Printf("Got a status from nodepeer tcp: %s, and a status:\n %s\n", p.TcpAddress(), jsonStatus)
 	return statusResp, nil
 }
 
