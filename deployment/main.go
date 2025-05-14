@@ -2,17 +2,10 @@ package main
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/pulumi/pulumi-aws/sdk/v6/go/aws/ec2"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
-
-func GetPulumiCfgVar(ctx *pulumi.Context, key string) (value string, ok bool) {
-	project, _ := ctx.GetConfig("project")
-	value, ok = ctx.GetConfig(fmt.Sprintf("%s:%s", project, key))
-	return
-}
 
 func main() {
 	pulumi.Run(func(ctx *pulumi.Context) error {

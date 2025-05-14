@@ -29,5 +29,6 @@ func addNodeCmd() *cobra.Command {
 		},
 	}
 	addRequiredArg(cmd)
+
 	return cmd
 }
