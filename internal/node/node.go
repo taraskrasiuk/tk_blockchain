@@ -77,6 +77,33 @@ func (h *HttpNodeHandler) handlerNodeStatus(w http.ResponseWriter, r *http.Reque
 	}
 }
 
+type SyncResponse struct {
+	Blocks []block.Block `json:"blocks"`
+}
+
+func (h *HttpNodeHandler) handlerSync(w http.ResponseWriter, r *http.Request) {
+	reqHash := r.URL.Query().Get("fromBlock")
+	if reqHash == "" {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("not found"))
+		return
+	}
+	hash := block.Hash{}
+	err := hash.UnmarshalText([]byte(reqHash))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("could not read a hash"))
+		return
+	}
+	blocks, err := state.GetBlocksAfter(hash, h.n.dirname)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("could not get the blocks"))
+		return
+	}
+	writeJSON(w, http.StatusOK, SyncResponse{blocks})
+}
+
 type TxAddRequestBody struct {
 	From  string `json:"from"`
 	To    string `json:"to"`
@@ -193,13 +220,14 @@ func (n *Node) Run(ctx context.Context) error {
 	mux.HandleFunc("GET /balances/list", nodeHandler.handlerBalancesList)
 	mux.HandleFunc("POST /tx/add", nodeHandler.handlerTxAddRequest)
 	mux.HandleFunc("GET /node/status", nodeHandler.handlerNodeStatus)
+	mux.HandleFunc("GET /node/sync", nodeHandler.handlerSync)
 
 	return http.ListenAndServe(fmt.Sprintf(":%d", n.port), mux)
 }
 
 // Sync logic in order to synchronized the db of the nodes.
 func (n *Node) sync(ctx context.Context) {
-	t := time.NewTicker(5 * time.Second)
+	t := time.NewTicker(45 * time.Second)
 
 	// run infinite loop
 	for {
@@ -219,7 +247,7 @@ func (n *Node) lookupNewBlocksAndPeers() error {
 	for _, peer := range n.knownPeers {
 		status, err := queryNodeStatus(&peer)
 		if err != nil {
-			fmt.Errorf("got an error while looking up for a new blocks, %v\n", err)
+			fmt.Printf("got an error while looking up for a new blocks, %v\n", err)
 			continue
 		}
 		jsonStatus, _ := json.MarshalIndent(status, "", "  ")
@@ -227,6 +255,15 @@ func (n *Node) lookupNewBlocksAndPeers() error {
 		localBlockNumber := n.state.GetLastBlock().Header.Number
 		if localBlockNumber < status.BlockNumber {
 			// _ := status.BlockNumber - localBlockNumber
+			newBlocks, err := queryNodeBlocks(*n.state.GetLastHash(), &peer)
+			if err != nil {
+				fmt.Printf("got an error while trying to get the new blocks, %v\n", err)
+				continue
+			}
+			fmt.Println("found new blocks")
+			for _, newBlock := range newBlocks.Blocks {
+				n.state.AddBlock(newBlock)
+			}
 		}
 
 		for _, statusPeer := range status.KnownPeers {
@@ -253,6 +290,20 @@ func queryNodeStatus(p *PeerNode) (NodeStatusResponse, error) {
 	var statusResp NodeStatusResponse
 	if err := json.NewDecoder(response.Body).Decode(&statusResp); err != nil {
 		return NodeStatusResponse{}, err
+	}
+	return statusResp, nil
+}
+
+func queryNodeBlocks(lastBlockHash block.Hash, p *PeerNode) (SyncResponse, error) {
+	fmt.Println("last hash: " + lastBlockHash.ToString())
+	response, err := http.Get(fmt.Sprintf("http://%s/node/sync?fromBlock=%s", p.TcpAddress(), lastBlockHash.ToString()))
+	if err != nil {
+		return SyncResponse{}, err
+	}
+	defer response.Body.Close()
+	var statusResp SyncResponse
+	if err := json.NewDecoder(response.Body).Decode(&statusResp); err != nil {
+		return SyncResponse{}, err
 	}
 	return statusResp, nil
 }

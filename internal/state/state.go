@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"taraskrasiuk/blockchain_l/internal/block"
@@ -120,8 +121,57 @@ func (s *State) Add(tx transactions.Tx) error {
 	return nil
 }
 
+func (s *State) AddBlock(b block.Block) (block.Hash, error) {
+	// make a temporary copy of the state, in order to avoid race conditions
+	pendingState := s.copy()
+	// apply a block to pending state
+	if err := applyBlock(b, pendingState); err != nil {
+		return block.Hash{}, err
+	}
+	// get a block hash
+	blockHash, err := b.Hash()
+	if err != nil {
+		return block.Hash{}, err
+	}
+	// create a blockFS instance for saving it to file
+	blockFS := block.BlockFS{
+		Key:   blockHash,
+		Value: b,
+	}
+	blockFSjson, err := json.Marshal(&blockFS)
+	if err != nil {
+		return block.Hash{}, err
+	}
+	fmt.Println("Persisting a new block to db file")
+	if _, err := s.blockFile.Write(append(blockFSjson, '\n')); err != nil {
+		return block.Hash{}, err
+	}
+	s.Balances = pendingState.Balances
+	s.lastBlockHash = blockHash
+	s.lastBlock = b
+
+	return blockHash, nil
+}
+
+func (s *State) copy() State {
+	newState := State{}
+	newState.lastBlockHash = s.lastBlockHash
+	newState.lastBlock = s.lastBlock
+	newState.txMempool = make([]transactions.Tx, len(s.txMempool))
+	newState.Balances = make(map[transactions.Account]uint)
+
+	for acc, balance := range s.Balances {
+		newState.Balances[acc] = balance
+	}
+
+	for _, tx := range s.txMempool {
+		newState.txMempool = append(newState.txMempool, tx)
+	}
+	return newState
+}
+
 // Add block to state, and apply all block's transactions to the current state txMempool.
-func (s *State) AddBlock(b block.Block) error {
+func applyBlock(b block.Block, s State) error {
 	for _, tx := range b.Payload {
 		if err := s.apply(tx); err != nil {
 			return err
@@ -183,4 +233,36 @@ func (s *State) GetLastHash() *block.Hash {
 
 func (s *State) GetLastBlock() *block.Block {
 	return &s.lastBlock
+}
+
+func GetBlocksAfter(blockHash block.Hash, dir string) ([]block.Block, error) {
+	f, err := os.OpenFile(getBlocksDbFile(dir), os.O_RDONLY, 0600)
+	if err != nil {
+		return nil, err
+	}
+	scanner := bufio.NewScanner(f)
+	scanner.Split(bufio.ScanLines)
+
+	blocks := []block.Block{}
+	shouldStartAppending := false
+
+	for scanner.Scan() {
+		if scanner.Err() != nil {
+			return nil, scanner.Err()
+		}
+		var currentBlock block.BlockFS
+		if err := json.Unmarshal(scanner.Bytes(), &currentBlock); err != nil {
+			return nil, err
+		}
+
+		if shouldStartAppending {
+			blocks = append(blocks, currentBlock.Value)
+		}
+
+		if currentBlock.Key == blockHash {
+			shouldStartAppending = true
+		}
+	}
+
+	return blocks, nil
 }

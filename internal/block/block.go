@@ -19,6 +19,10 @@ func (h *Hash) UnmarshalText(data []byte) error {
 	return err
 }
 
+func (h *Hash) ToString() string {
+	return hex.EncodeToString(h[:])
+}
+
 type Block struct {
 	Header  BlockHeader       `json:"header"`
 	Payload []transactions.Tx `json:"payload"`
