@@ -3,8 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"taraskrasiuk/blockchain_l/internal/state"
-	"taraskrasiuk/blockchain_l/internal/transactions"
+	"taraskrasiuk/blockchain_l/internal/database"
 
 	"github.com/spf13/cobra"
 )
@@ -36,12 +35,12 @@ func txAddCmd() *cobra.Command {
 			// get a state
 			// add transaction to state
 			// persist the state
-			fromAcc := transactions.NewAccount(from)
-			toAcc := transactions.NewAccount(to)
+			fromAcc := database.NewAccount(from)
+			toAcc := database.NewAccount(to)
 
-			tx := transactions.NewTx(fromAcc, toAcc, data, value)
+			tx := database.NewTx(fromAcc, toAcc, data, value)
 
-			s, err := state.NewState(dirname, true)
+			s, err := database.NewState(dirname, true)
 			if err != nil {
 				log.Fatal(err)
 				return

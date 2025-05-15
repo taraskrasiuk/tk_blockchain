@@ -3,9 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log"
-	"taraskrasiuk/blockchain_l/internal/block"
-	"taraskrasiuk/blockchain_l/internal/state"
-	"taraskrasiuk/blockchain_l/internal/transactions"
+	"taraskrasiuk/blockchain_l/internal/database"
 
 	"github.com/spf13/cobra"
 )
@@ -18,12 +16,12 @@ func addMigrationCmd() *cobra.Command {
 			var (
 				dirname, _ = cmd.Flags().GetString("dir")
 			)
-			s, _ := state.NewState(dirname, true)
+			s, _ := database.NewState(dirname, true)
 			defer s.Close()
 
-			block0 := block.NewBlock(block.Hash{}, 0, []transactions.Tx{
-				*transactions.NewTx(transactions.Account("andrej"), transactions.Account("andrej"), "", 3),
-				*transactions.NewTx(transactions.Account("andrej"), transactions.Account("andrej"), "reward", 700),
+			block0 := database.NewBlock(database.Hash{}, 0, []database.Tx{
+				*database.NewTx(database.Account("andrej"), database.Account("andrej"), "", 3),
+				*database.NewTx(database.Account("andrej"), database.Account("andrej"), "reward", 700),
 			})
 
 			s.AddBlock(block0)
@@ -35,14 +33,14 @@ func addMigrationCmd() *cobra.Command {
 			fmt.Printf("block hash: %x\n", block0Hash)
 			fmt.Printf("parent block hash: %x\n", block0.Header.ParentHash)
 
-			block1 := block.NewBlock(block0Hash, 1, []transactions.Tx{
-				*transactions.NewTx("andrej", "babayaga", "", 2000),
-				*transactions.NewTx("andrej", "andrej", "reward", 100),
-				*transactions.NewTx("babayaga", "andrej", "", 1),
-				*transactions.NewTx("babayaga", "caesar", "", 1000),
-				*transactions.NewTx("babayaga", "andrej", "", 50),
-				*transactions.NewTx("andrej", "andrej", "reward", 600),
-				*transactions.NewTx("andrej", "andrej", "reward", 2600),
+			block1 := database.NewBlock(block0Hash, 1, []database.Tx{
+				*database.NewTx("andrej", "babayaga", "", 2000),
+				*database.NewTx("andrej", "andrej", "reward", 100),
+				*database.NewTx("babayaga", "andrej", "", 1),
+				*database.NewTx("babayaga", "caesar", "", 1000),
+				*database.NewTx("babayaga", "andrej", "", 50),
+				*database.NewTx("andrej", "andrej", "reward", 600),
+				*database.NewTx("andrej", "andrej", "reward", 2600),
 			})
 
 			s.AddBlock(block1)

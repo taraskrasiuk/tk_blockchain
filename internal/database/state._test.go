@@ -1,12 +1,10 @@
-package state
+package database 
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"os"
-	"taraskrasiuk/blockchain_l/internal/block"
-	"taraskrasiuk/blockchain_l/internal/transactions"
 	"testing"
 )
 
@@ -63,22 +61,22 @@ func setup() error {
 	blocksFile = "utest_" + blocksFile
 
 	s, _ := NewState(testDbDir, true)
-	block0 := block.NewBlock(block.Hash{}, 1, []transactions.Tx{
-		*transactions.NewTx(transactions.Account("andrej"), transactions.Account("andrej"), "", 3),
-		*transactions.NewTx(transactions.Account("andrej"), transactions.Account("andrej"), "reward", 700),
+	block0 := NewBlock(Hash{}, 1, []Tx{
+		*NewTx(Account("andrej"), Account("andrej"), "", 3),
+		*NewTx(Account("andrej"), Account("andrej"), "reward", 700),
 	})
 	s.AddBlock(block0)
 	block0Hash, err := s.Persist()
 	if err != nil {
 		log.Fatal(err)
 	}
-	block1 := block.NewBlock(block0Hash, 2, []transactions.Tx{
-		*transactions.NewTx("andrej", "babayaga", "", 2000),
-		*transactions.NewTx("andrej", "andrej", "reward", 100),
-		*transactions.NewTx("babayaga", "andrej", "", 1),
-		*transactions.NewTx("babayaga", "caesar", "", 1000),
-		*transactions.NewTx("babayaga", "andrej", "", 50),
-		*transactions.NewTx("andrej", "andrej", "reward", 600),
+	block1 := NewBlock(block0Hash, 2, []Tx{
+		*NewTx("andrej", "babayaga", "", 2000),
+		*NewTx("andrej", "andrej", "reward", 100),
+		*NewTx("babayaga", "andrej", "", 1),
+		*NewTx("babayaga", "caesar", "", 1000),
+		*NewTx("babayaga", "andrej", "", 50),
+		*NewTx("andrej", "andrej", "reward", 600),
 	})
 	s.AddBlock(block1)
 	s.Persist()

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"taraskrasiuk/blockchain_l/internal/state"
+	"taraskrasiuk/blockchain_l/internal/database"
 
 	"github.com/spf13/cobra"
 )
@@ -18,7 +18,7 @@ func addBalancesListCmd() *cobra.Command {
 			var (
 				dirname, _ = cmd.Flags().GetString("dir")
 			)
-			s, err := state.NewState(dirname, true)
+			s, err := database.NewState(dirname, true)
 			if err != nil {
 				log.Fatal(err)
 				return

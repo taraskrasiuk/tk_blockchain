@@ -4,7 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"strconv"
-	"taraskrasiuk/blockchain_l/internal/state"
+	"taraskrasiuk/blockchain_l/internal/database"
 
 	"github.com/spf13/cobra"
 )
@@ -18,7 +18,7 @@ func addNodeCmd() *cobra.Command {
 				dirname, _ = cmd.Flags().GetString("dir")
 			)
 
-			s, _ := state.NewState(dirname, true)
+			s, _ := database.NewState(dirname, true)
 			defer s.Close()
 			lastBlock := s.GetLastBlock()
 

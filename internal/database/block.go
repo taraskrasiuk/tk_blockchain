@@ -1,10 +1,9 @@
-package block
+package database
 
 import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"taraskrasiuk/blockchain_l/internal/transactions"
 	"time"
 )
 
@@ -19,21 +18,16 @@ func (h *Hash) UnmarshalText(data []byte) error {
 	return err
 }
 
-func (h *Hash) ToString() string {
+func (h Hash) String() string {
 	return hex.EncodeToString(h[:])
 }
 
 type Block struct {
-	Header  BlockHeader       `json:"header"`
-	Payload []transactions.Tx `json:"payload"`
+	Header  BlockHeader `json:"header"`
+	Payload []Tx        `json:"payload"`
 }
 
-type BlockFS struct {
-	Key   Hash  `json:"hash"`
-	Value Block `json:"block"`
-}
-
-func NewBlock(parentHash Hash, num uint64, payload []transactions.Tx) Block {
+func NewBlock(parentHash Hash, num uint64, payload []Tx) Block {
 	h := BlockHeader{
 		ParentHash: parentHash,
 		Number:     num,
@@ -57,4 +51,9 @@ func (b Block) Hash() (Hash, error) {
 		return Hash{}, err
 	}
 	return sha256.Sum256(blockJson), nil
+}
+
+type BlockFS struct {
+	Key   Hash  `json:"hash"`
+	Value Block `json:"block"`
 }
