@@ -3,21 +3,22 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"taraskrasiuk/blockchain_l/internal/node"
 )
 
 type NodeServer struct {
-	node   *node.Node
-	logger *log.Logger
-	port   int
+	node *node.Node
+	port uint
+}
+
+func NewNodeServer(n *node.Node, p uint) *NodeServer {
+	return &NodeServer{n, p}
 }
 
 func (s *NodeServer) Run(ctx context.Context) error {
-	s.logger.Printf(" node server is running on port %d", s.port)
-
+	logger.Printf(" node server is running on port %d", s.port)
 	if err := s.node.Run(ctx); err != nil {
 		return err
 	}
