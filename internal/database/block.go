@@ -33,6 +33,9 @@ func NewBlock(parentHash Hash, num uint64, payload []Tx) Block {
 		Number:     num,
 		Time:       uint64(time.Now().Unix()),
 	}
+	for _, t := range payload {
+		logger.Printf("new block with tx: from: %s, to: %s, value: %d\n", t.From, t.To, t.Value)
+	}
 	return Block{
 		Header:  h,
 		Payload: payload,

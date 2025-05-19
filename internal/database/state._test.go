@@ -1,21 +1,10 @@
-package database 
+package database
 
 import (
-	"context"
-	"fmt"
 	"log"
 	"os"
 	"testing"
 )
-
-func f() (cancel func()) {
-	_, cancel = context.WithCancel(context.TODO())
-	cancel2 := func() {
-		cancel()
-		fmt.Println("canceled")
-	}
-	return cancel2
-}
 
 var testDbDir = "test-dir"
 
@@ -84,12 +73,6 @@ func setup() error {
 }
 
 func cleanup() error {
-	// if err := os.Remove(genesisFile); err != nil {
-	// 	return err
-	// }
-	// if err := os.Remove(blocksFile); err != nil {
-	// 	return err
-	// }
 	if err := os.RemoveAll(testDbDir); err != nil {
 		return err
 	}
@@ -109,7 +92,7 @@ func TestState(t *testing.T) {
 
 	state, _ := NewState(testDbDir, true)
 
-	expectedBalance := 1000151
+	expectedBalance := 999451
 	if state.Balances["andrej"] != uint(expectedBalance) {
 		t.Fatalf("expected the balance for andrej to be %d but got %d", expectedBalance, state.Balances["andrej"])
 	}

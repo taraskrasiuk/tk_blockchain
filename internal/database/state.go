@@ -82,6 +82,10 @@ func (s *State) AddBlock(b Block) (Hash, error) {
 	return blockHash, nil
 }
 
+func (s *State) GetMemPool() []Tx {
+	return s.txMempool
+}
+
 func (s *State) Persist() (Hash, error) {
 	// create a new block, and set a parent block's hash
 	b := NewBlock(s.lastBlockHash, s.lastBlock.Header.Number+1, s.txMempool)
@@ -164,8 +168,13 @@ func (s *State) loadBlocksFile(dirname string) error {
 		if err := json.Unmarshal(scanner.Bytes(), &blockFS); err != nil {
 			return err
 		}
-		// apply block
-		applyBlock(blockFS.Value, s)
+
+		// apply the block's payload
+		for _, tx := range blockFS.Value.Payload {
+			if err := applyTx(tx, s); err != nil {
+				return err
+			}
+		}
 
 		s.lastBlock = blockFS.Value
 		s.lastBlockHash = blockFS.Key

@@ -23,8 +23,7 @@ func NewLoggerMiddleware(next http.Handler, out io.Writer) *LoggerMiddleware {
 
 func (l LoggerMiddleware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
-
 	l.next.ServeHTTP(w, r)
 
-	fmt.Fprintf(l.out, "[%s]: %s %s", r.Method, r.URL, time.Now().Sub(startTime).String())
+	fmt.Fprintf(l.out, "[%s]: %s %s\n", r.Method, r.URL, time.Since(startTime).String())
 }

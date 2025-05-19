@@ -52,10 +52,12 @@ func addRunCmd() *cobra.Command {
 			)
 
 			if isBootstrap {
+				fmt.Printf("Running a bootstrap node %s and port %d\n", datadir, port)
 				if err := runBootstrapNode(cmd, datadir, port); err != nil {
 					log.Fatal(err)
 				}
 			} else {
+				fmt.Printf("Running a peer node %s and port %d\n", datadir, port)
 				if err := runPeerNode(cmd, datadir, port); err != nil {
 					log.Fatal(err)
 				}

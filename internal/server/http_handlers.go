@@ -58,6 +58,7 @@ func (h *HttpNodeHandler) handlerSync(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, blocks)
 }
 
+// ===== POST /tx/add
 func (h *HttpNodeHandler) handlerTxAddRequest(w http.ResponseWriter, r *http.Request) {
 	type reqBody struct {
 		From  string `json:"from"`
@@ -80,9 +81,9 @@ func (h *HttpNodeHandler) handlerTxAddRequest(w http.ResponseWriter, r *http.Req
 		return
 	}
 	resp := struct {
-		Hash database.Hash `json:"hash"`
+		Hash *database.Hash `json:"hash"`
 	}{
-		Hash: hash,
+		Hash: &hash,
 	}
 	if err := writeJSON(w, http.StatusOK, resp); err != nil {
 		writeErr(w, http.StatusInternalServerError, "could not create a response message due to: "+err.Error())

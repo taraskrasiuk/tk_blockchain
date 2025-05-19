@@ -73,6 +73,7 @@ func (n *Node) doSync(ctx context.Context) {
 	ctxWithTimout, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	for _, peer := range n.knownPeers {
+		logger.Printf(".doSync() running for peer: %s\n", peer.TcpAddress())
 		status, err := peer.getPeerNodeStatus(ctxWithTimout)
 		if err != nil {
 			logger.Printf(".doSync() queryNodeStatus error occured %v\n", err)
@@ -163,11 +164,17 @@ func (n *Node) ViewSyncBlocks(afterHash database.Hash) (SyncBlocksRes, error) {
 
 // ==== Add new transaction
 func (n *Node) AddTransaction(from, to, data string, value uint) (database.Hash, error) {
+	// validate input
 	if from == "" || to == "" {
 		return database.Hash{}, errors.New("the fields 'from' or 'to' are missed")
 	}
 	if value == 0 {
 		return database.Hash{}, errors.New("the value could not being negative")
+	}
+
+	logger.Println("SHOW current txMemPool:")
+	for _, t := range n.state.GetMemPool() {
+		logger.Printf(". current tx in mem pool: from %s, to %s , val %d", t.From, t.To, t.Value)
 	}
 
 	newTx := database.NewTx(database.Account(from), database.Account(to), data, value)
