@@ -13,5 +13,5 @@ For linux distribution, the GOOS and GOARCH should be setup.
 ## Create a symlink on instance
 - ln -s app/{path}/tbb usr/ec2-user/local/bin/tbb
 
-## Run the node
-- tbb run -dir ./database
+## Run the bootstrap node
+- tbb run --dir=./database --bootstrap --port=8080

@@ -35,6 +35,7 @@ func (s *NodeServer) Run(ctx context.Context) error {
 	// node
 	mux.HandleFunc("GET /node/status", nodeHandler.handlerNodeStatus)
 	mux.HandleFunc("GET /node/sync", nodeHandler.handlerSync)
+	mux.HandleFunc("GET /node/addpeer", nodeHandler.handlerAddPeer)
 
 	withLogger := NewLoggerMiddleware(mux, os.Stdout)
 

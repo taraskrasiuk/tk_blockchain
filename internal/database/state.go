@@ -55,11 +55,13 @@ func (s *State) AddBlock(b Block) (Hash, error) {
 	pendingState := s.copy()
 	// apply a block to pending state
 	if err := applyBlock(b, &pendingState); err != nil {
+		logger.Printf("could not apply a block %v\n", err)
 		return Hash{}, err
 	}
 	// get a block hash
 	blockHash, err := b.Hash()
 	if err != nil {
+		logger.Printf("could not get a block's hash %v\n", err)
 		return Hash{}, err
 	}
 	// create a blockFS instance for saving it to file
@@ -69,15 +71,19 @@ func (s *State) AddBlock(b Block) (Hash, error) {
 	}
 	blockFSjson, err := json.Marshal(&blockFS)
 	if err != nil {
+		logger.Printf("could not get marshal a block %v\n", err)
 		return Hash{}, err
 	}
-	fmt.Println("Persisting a new block to db file")
+	logger.Println("Persisting a new block to db file")
 	if _, err := s.blockFile.Write(append(blockFSjson, '\n')); err != nil {
+		logger.Printf(" could not persist a new block %v\n", err)
 		return Hash{}, err
 	}
 	s.Balances = pendingState.Balances
 	s.lastBlockHash = blockHash
 	s.lastBlock = b
+
+	logger.Println("done adding a block")
 
 	return blockHash, nil
 }
@@ -131,6 +137,11 @@ func (s *State) GetBlocksAfter(blockHash Hash, datadir string) ([]Block, error) 
 
 	blocks := []Block{}
 	shouldStartAppending := false
+
+	// If the blockHash is a zero block, start to collecting blocks.
+	if reflect.DeepEqual(blockHash, Hash{}) {
+		shouldStartAppending = true
+	}
 
 	for scanner.Scan() {
 		if scanner.Err() != nil {

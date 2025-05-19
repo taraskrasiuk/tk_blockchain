@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"taraskrasiuk/blockchain_l/internal/database"
@@ -78,6 +79,31 @@ func (p *PeerNode) getNodeBlocks(ctx context.Context, lastBlockHash database.Has
 	return *blocks, nil
 }
 
+type GetAddingPeerResponse struct {
+	Success bool   `json:"success"`
+	Error   string `json:"error"`
+}
+
+func (p *PeerNode) joinPeer(ctx context.Context, ip string, port uint) (GetAddingPeerResponse, error) {
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	var res GetAddingPeerResponse
+	result, err := getReq(ctxWithTimeout, p, fmt.Sprintf("/node/addpeer?ip=%s&port=%d`", ip, port), &res)
+	fmt.Printf("result :: %v", result)
+	if err != nil {
+		logger.Printf("e %v\n", err)
+		return GetAddingPeerResponse{false, err.Error()}, err
+	}
+	response, ok := result.(*GetAddingPeerResponse)
+	if !ok {
+		e := fmt.Errorf("%s. could not convert a response to type GetAddingPeerResponse", logger.Prefix())
+		return GetAddingPeerResponse{false, e.Error()}, e
+	}
+	return *response, nil
+}
+
+// create a inner variable in order to mock it in test
 var httpClient *http.Client = http.DefaultClient
 
 // ==========
@@ -90,9 +116,12 @@ func getReq(ctx context.Context, p *PeerNode, path string, resp any) (any, error
 	if err != nil {
 		return &resp, err
 	}
+	if response.StatusCode != http.StatusOK {
+		return nil, errors.New("Not found")
+	}
 	defer response.Body.Close()
 	if err := json.NewDecoder(response.Body).Decode(&resp); err != nil {
-		return &resp, err
+		return resp, err
 	}
-	return &resp, nil
+	return resp, nil
 }

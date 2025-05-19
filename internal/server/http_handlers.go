@@ -2,7 +2,9 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
+	"strconv"
 	"taraskrasiuk/blockchain_l/internal/database"
 	"taraskrasiuk/blockchain_l/internal/node"
 )
@@ -89,6 +91,32 @@ func (h *HttpNodeHandler) handlerTxAddRequest(w http.ResponseWriter, r *http.Req
 		writeErr(w, http.StatusInternalServerError, "could not create a response message due to: "+err.Error())
 		return
 	}
+}
+
+// ==== GET /node/addpeer?ip=xxxx&port=xxxx
+func (h *HttpNodeHandler) handlerAddPeer(w http.ResponseWriter, r *http.Request) {
+	var (
+		ip   = r.URL.Query().Get("ip")
+		port = r.URL.Query().Get("port")
+	)
+	if ip == "" || port == "" {
+		writeErr(w, http.StatusBadRequest, "ip and port should be defined in query")
+		return
+	}
+
+	peerPort, err := strconv.ParseUint(port, 10, 32)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	p := node.NewPeerNode(ip, uint(peerPort), false, true)
+	h.node.AddPeer(p)
+	fmt.Printf("Peer node %s, successfully added.", p.TcpAddress())
+	type successRes struct {
+		Success bool   `json:"success"`
+		Error   string `json:"error"`
+	}
+	writeJSON(w, http.StatusOK, &successRes{true, ""})
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, v any) error {

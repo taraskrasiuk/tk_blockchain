@@ -4,26 +4,31 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"sync"
 	"taraskrasiuk/blockchain_l/internal/database"
 	"time"
 )
 
 const (
-	SYNC_TIME_TIMEOUT = 30 * time.Second
+	SYNC_TIME_TIMEOUT = 15 * time.Second
 	DefaultHTTPport   = 8080
 )
 
 type Node struct {
 	dirname        string
+	ip             string
 	port           uint
 	state          *database.State
+	mu             sync.Mutex
 	knownPeers     map[string]PeerNode
 	hasGenesisFile bool
 }
 
-func NewNode(datadir string, port uint, bootstrap *PeerNode, hasGenesisFile bool) *Node {
+func NewNode(datadir string, port uint, ip string, bootstrap *PeerNode, hasGenesisFile bool) *Node {
 	node := &Node{
 		dirname:        datadir,
+		ip:             ip,
 		port:           port,
 		knownPeers:     make(map[string]PeerNode),
 		hasGenesisFile: hasGenesisFile,
@@ -60,7 +65,6 @@ func (n *Node) sync(ctx context.Context) {
 	for {
 		select {
 		case <-t.C:
-			logger.Println(".sync(), time to sync a node")
 			n.doSync(ctx)
 		case <-ctx.Done():
 			t.Stop()
@@ -73,10 +77,18 @@ func (n *Node) doSync(ctx context.Context) {
 	ctxWithTimout, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	for _, peer := range n.knownPeers {
+		if peer.IP == n.ip && peer.Port == n.port {
+			logger.Println(".doSync() skip sync self")
+			continue
+		}
 		logger.Printf(".doSync() running for peer: %s\n", peer.TcpAddress())
 		status, err := peer.getPeerNodeStatus(ctxWithTimout)
 		if err != nil {
 			logger.Printf(".doSync() queryNodeStatus error occured %v\n", err)
+		}
+		err = n.joinPeer(ctx, &peer)
+		if err != nil {
+			logger.Printf(".doSync() joining peer %s", peer.TcpAddress())
 		}
 		err = n.syncBlocks(ctx, peer, status)
 		if err != nil {
@@ -108,13 +120,47 @@ func (n *Node) syncPeers(status GetPeerNodeStatusResponse) error {
 	return nil
 }
 
+// This function will send a request to node in order to be added to known peers.
+func (n *Node) joinPeer(ctx context.Context, p *PeerNode) error {
+	// skip if node already connected to peer node
+	if p.IsActive {
+		logger.Printf(" joinPeer() peer is active")
+		return nil
+	}
+	url := fmt.Sprintf("%s/node/addpeer?ip=%s&port=%d", p.TcpAddressWithProtocol(), n.ip, n.port)
+	logger.Printf(" joinPeer() with url %s", url)
+	if _, err := http.Get(url); err != nil {
+		return err
+	}
+	response, err := p.joinPeer(ctx, n.ip, n.port)
+	if err != nil {
+		logger.Printf(" joinPerr() got an error %v", err)
+		return err
+	}
+	logger.Printf(" joinPeer(), receive a response %v", response)
+	if response.Error != "" {
+		return fmt.Errorf(response.Error)
+	}
+
+	// update the isActive field
+	n.mu.Lock()
+	p.IsActive = response.Success
+	n.AddPeer(p)
+	n.mu.Unlock()
+	logger.Printf("Successfully sending a request to add a node with ip %s to peer node %s", n.ip, p.TcpAddress())
+
+	return nil
+}
+
 func (n *Node) syncBlocks(ctx context.Context, p PeerNode, status GetPeerNodeStatusResponse) error {
 	localBlockNumber := n.state.GetLastBlock().Header.Number
 	if localBlockNumber < status.BlockNumber {
+		logger.Printf(" getNodeBlocks() with a last hash: %s", *n.state.GetLastHash())
 		newBlocks, err := p.getNodeBlocks(ctx, *n.state.GetLastHash())
 		if err != nil {
 			return fmt.Errorf("%s could not retrieve the peer node's blocks. \n %v", logger.Prefix(), err)
 		}
+		logger.Printf("Found new blocks %d", len(newBlocks.Blocks))
 		for _, newBlock := range newBlocks.Blocks {
 			n.state.AddBlock(newBlock)
 		}
