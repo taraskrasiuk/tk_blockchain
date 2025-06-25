@@ -1,12 +1,10 @@
-package database
+package node
 
 import (
-	"log"
+	"context"
 	"os"
 	"testing"
 )
-
-var testDbDir = "test-dir"
 
 // change db files which state uses.
 func setupMockGenesisDBFile(filename string) error {
@@ -44,61 +42,32 @@ func setupMockTxDBFile(filename string) error {
 	return nil
 }
 
-func setup() error {
-	// change original filenames which state uses
-	genesisFile = "utest_" + genesisFile
-	blocksFile = "utest_" + blocksFile
-
-	s, _ := NewState(testDbDir, true)
-	block0 := NewBlock(Hash{}, 1, 0x0123, []Tx{
-		*NewTx(Account("andrej"), Account("andrej"), "", 3),
-		*NewTx(Account("andrej"), Account("andrej"), "reward", 700),
-	})
-	s.AddBlock(block0)
-	block0Hash, err := s.Persist()
-	if err != nil {
-		log.Fatal(err)
+func setup() {
+	if err := os.Mkdir(testDir, 0777); err != nil {
+		panic(err)
 	}
-	block1 := NewBlock(block0Hash, 2, 0x0123, []Tx{
-		*NewTx("andrej", "babayaga", "", 2000),
-		*NewTx("andrej", "andrej", "reward", 100),
-		*NewTx("babayaga", "andrej", "", 1),
-		*NewTx("babayaga", "caesar", "", 1000),
-		*NewTx("babayaga", "andrej", "", 50),
-		*NewTx("andrej", "andrej", "reward", 600),
-	})
-	s.AddBlock(block1)
-	s.Persist()
-	return nil
+	if err := setupMockGenesisDBFile(testDir + "/genesis.json"); err != nil {
+		panic(err)
+	}
+
 }
 
-func cleanup() error {
-	if err := os.RemoveAll(testDbDir); err != nil {
-		return err
+func clear() {
+	if err := os.RemoveAll(testDir); err != nil {
+		panic(err)
 	}
-	return nil
 }
 
-func TestState(t *testing.T) {
-	err := setup()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer func() {
-		if err := cleanup(); err != nil {
-			log.Fatal(err)
-		}
-	}()
+var testDir = "ttest"
 
-	state, _ := NewState(testDbDir, true)
+func TestAddPendingTransaction(t *testing.T) {
+	setup()
+	defer clear()
 
-	expectedBalance := 999451
-	if state.Balances["andrej"] != uint(expectedBalance) {
-		t.Fatalf("expected the balance for andrej to be %d but got %d", expectedBalance, state.Balances["andrej"])
+	ctx := context.Background()
+	n := NewNode(testDir, 8080, "", nil, true)
+	if err := n.Run(ctx); err != nil {
+		panic(err)
 	}
 
-	expectedBalance = 949
-	if state.Balances["babayaga"] != uint(expectedBalance) {
-		t.Fatalf("expected the balance for babayaga to be %d but got %d", expectedBalance, state.Balances["babayaga"])
-	}
 }

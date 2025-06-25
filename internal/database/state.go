@@ -94,7 +94,7 @@ func (s *State) GetMemPool() []Tx {
 
 func (s *State) Persist() (Hash, error) {
 	// create a new block, and set a parent block's hash
-	b := NewBlock(s.lastBlockHash, s.lastBlock.Header.Number+1, s.txMempool)
+	b := NewBlock(s.lastBlockHash, s.lastBlock.Header.Number+1, 0x0123, s.txMempool)
 	bhash, err := b.Hash()
 	if err != nil {
 		return Hash{}, err
@@ -254,6 +254,11 @@ func (s *State) copy() State {
 	return newState
 }
 
+func (s *State) NextBlockNumber() uint64 {
+	lastBlockNum := s.lastBlock.Header.Number
+	return lastBlockNum + 1
+}
+
 // Add block to state, and apply all block's transactions to the current state txMempool.
 func applyBlock(b Block, s *State) error {
 	nextExpectedBlockNumber := s.lastBlock.Header.Number + 1
@@ -275,6 +280,13 @@ func applyTXs(txs []Tx, s *State) error {
 			return err
 		}
 		s.txMempool = append(s.txMempool, tx)
+	}
+	return nil
+}
+
+func (s *State) IsValidTX(tx Tx) error {
+	if s.Balances[tx.From] < tx.Value {
+		return fmt.Errorf("wrong TX, cant perform transaction. \n From: %s, To: %s, Value: %d \n", tx.From, tx.To, tx.Value)
 	}
 	return nil
 }

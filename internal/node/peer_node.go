@@ -35,6 +35,7 @@ type GetPeerNodeStatusResponse struct {
 	BlockHash   string              `json:"block_hash"`
 	BlockNumber uint64              `json:"block_number"`
 	KnownPeers  map[string]PeerNode `json:"known_peers"`
+	PendingTXs  []database.Tx       `json:"pendingTXs"`
 }
 
 // Get a peer node status. Used a context with a timeout 1 second.

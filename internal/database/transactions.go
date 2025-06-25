@@ -1,6 +1,8 @@
 package database
 
 import (
+	"crypto/sha256"
+	"encoding/json"
 	"time"
 )
 
@@ -24,6 +26,18 @@ func NewTx(from, to Account, data string, value uint) *Tx {
 	createdAt := time.Now().Format(time.RFC3339)
 
 	return &Tx{from, to, value, data, createdAt}
+}
+
+func (t *Tx) Hash() (Hash, error) {
+	txJson, err := t.Encode()
+	if err != nil {
+		return Hash{}, err
+	}
+	return sha256.Sum256(txJson), nil
+}
+
+func (t *Tx) Encode() ([]byte, error) {
+	return json.Marshal(t)
 }
 
 func (t *Tx) IsReward() bool {

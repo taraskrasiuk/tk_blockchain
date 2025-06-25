@@ -77,15 +77,20 @@ func (h *HttpNodeHandler) handlerTxAddRequest(w http.ResponseWriter, r *http.Req
 	}
 	defer r.Body.Close()
 
-	hash, err := h.node.AddTransaction(txReqBody.From, txReqBody.To, txReqBody.Data, txReqBody.Value)
+	tx := database.NewTx(database.Account(txReqBody.From), database.Account(txReqBody.To), txReqBody.Data, txReqBody.Value)
+	txHash, err := tx.Hash()
 	if err != nil {
+		writeErr(w, http.StatusBadRequest, "could not create a new pending transcation"+err.Error())
+		return
+	}
+	if err := h.node.AddPendingTX(*tx); err != nil {
 		writeErr(w, http.StatusBadRequest, "could not create a new transaction due to: "+err.Error())
 		return
 	}
 	resp := struct {
 		Hash *database.Hash `json:"hash"`
 	}{
-		Hash: &hash,
+		Hash: &txHash,
 	}
 	if err := writeJSON(w, http.StatusOK, resp); err != nil {
 		writeErr(w, http.StatusInternalServerError, "could not create a response message due to: "+err.Error())

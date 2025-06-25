@@ -19,7 +19,7 @@ func addMigrationCmd() *cobra.Command {
 			s, _ := database.NewState(dirname, true)
 			defer s.Close()
 
-			block0 := database.NewBlock(database.Hash{}, 0, []database.Tx{
+			block0 := database.NewBlock(database.Hash{}, 0, 0x0123, []database.Tx{
 				*database.NewTx(database.Account("andrej"), database.Account("andrej"), "", 3),
 				*database.NewTx(database.Account("andrej"), database.Account("andrej"), "reward", 700),
 			})
@@ -33,7 +33,7 @@ func addMigrationCmd() *cobra.Command {
 			fmt.Printf("block hash: %x\n", block0Hash)
 			fmt.Printf("parent block hash: %x\n", block0.Header.ParentHash)
 
-			block1 := database.NewBlock(block0Hash, 1, []database.Tx{
+			block1 := database.NewBlock(block0Hash, 1, 0x0123, []database.Tx{
 				*database.NewTx("andrej", "babayaga", "", 2000),
 				*database.NewTx("andrej", "andrej", "reward", 100),
 				*database.NewTx("babayaga", "andrej", "", 1),
