@@ -14,16 +14,15 @@ type PendingBlock struct {
 	number uint64
 	time   uint64
 	txs    []database.Tx
+	miner  database.Account
 }
 
-func NewPendingBlock(h database.Hash, n uint64, txs []database.Tx) *PendingBlock {
-	return &PendingBlock{h, n, uint64(time.Now().UnixMilli()), txs}
-}
-
-func createRandomPendingBlock() *PendingBlock {
-	return NewPendingBlock(database.Hash{}, 0, []database.Tx{
-		*database.NewTx(database.Account("andrej"), database.Account("taras"), "", 3),
-	})
+func NewPendingBlock(h database.Hash, n uint64, txs []database.Tx, miner database.Account) *PendingBlock {
+	fmt.Println("MINER: ", miner)
+	if miner == "" {
+		panic("The miner is an empty string")
+	}
+	return &PendingBlock{h, n, uint64(time.Now().UnixMilli()), txs, miner}
 }
 
 // Main Mine function
@@ -55,7 +54,7 @@ func Mine(ctx context.Context, p *PendingBlock) (database.Block, error) {
 			fmt.Printf("Mining Pending TXs with attempt %d", attempt)
 		}
 		fmt.Println("nonce: == ", nonce)
-		block = database.NewBlock(p.parent, p.number, nonce, p.txs)
+		block = database.NewBlock(p.parent, p.number, nonce, p.txs, p.miner)
 		blockHash, err := block.Hash()
 		if err != nil {
 			fmt.Printf("block hash is not valid %v", err)

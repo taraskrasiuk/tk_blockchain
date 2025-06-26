@@ -3,6 +3,7 @@ package node
 import (
 	"context"
 	"os"
+	"taraskrasiuk/blockchain_l/internal/database"
 	"testing"
 )
 
@@ -65,9 +66,8 @@ func TestAddPendingTransaction(t *testing.T) {
 	defer clear()
 
 	ctx := context.Background()
-	n := NewNode(testDir, 8080, "", nil, true)
+	n := NewNode(testDir, 8080, "", nil, database.NewAccount("test"), true)
 	if err := n.Run(ctx); err != nil {
 		panic(err)
 	}
-
 }

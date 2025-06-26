@@ -21,7 +21,7 @@ func TestNewBlock(t *testing.T) {
 	txs := []Tx{
 		createTx("from", "to", 100),
 	}
-	block0 := NewBlock(parentHash, 1, 0x0123, txs)
+	block0 := NewBlock(parentHash, 1, 0x0123, txs, Account("miner"))
 	bhash0, err := block0.Hash()
 	if err != nil {
 		t.Fatalf("got an error %v", err)
@@ -29,7 +29,7 @@ func TestNewBlock(t *testing.T) {
 	// if !reflect.DeepEqual(block0.Header.ParentHash, Hash{}) {
 	// 	t.Fatalf("the parent hash is not correct, expected %x but got %x", Hash{}, block0.Header.ParentHash)
 	// }
-	block1 := NewBlock(bhash0, 2, 0x0000123, append(txs, []Tx{createTx("from-2", "to2", 200)}...))
+	block1 := NewBlock(bhash0, 2, 0x0000123, append(txs, []Tx{createTx("from-2", "to2", 200)}...), Account("miner"))
 	_, err = block1.Hash()
 	if err != nil {
 		t.Fatalf("got an error %v", err)

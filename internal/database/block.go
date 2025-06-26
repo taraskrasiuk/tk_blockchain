@@ -28,12 +28,13 @@ type Block struct {
 	Payload []Tx        `json:"payload"`
 }
 
-func NewBlock(parentHash Hash, num uint64, nonce uint32, payload []Tx) Block {
+func NewBlock(parentHash Hash, num uint64, nonce uint32, payload []Tx, miner Account) Block {
 	h := BlockHeader{
 		ParentHash: parentHash,
 		Number:     num,
 		Time:       uint64(time.Now().Unix()),
 		Nonce:      nonce,
+		Miner:      miner,
 	}
 	for _, t := range payload {
 		logger.Printf("new block with tx: from: %s, to: %s, value: %d\n", t.From, t.To, t.Value)
@@ -45,10 +46,11 @@ func NewBlock(parentHash Hash, num uint64, nonce uint32, payload []Tx) Block {
 }
 
 type BlockHeader struct {
-	ParentHash Hash   `json:"parentHash"`
-	Number     uint64 `json:"number"`
-	Nonce      uint32 `json:"nonce"`
-	Time       uint64 `json:"time"`
+	ParentHash Hash    `json:"parentHash"`
+	Number     uint64  `json:"number"`
+	Nonce      uint32  `json:"nonce"`
+	Time       uint64  `json:"time"`
+	Miner      Account `json:"miner"`
 }
 
 func (b Block) Hash() (Hash, error) {

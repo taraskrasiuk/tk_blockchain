@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+func createRandomPendingBlock() *PendingBlock {
+	minerAcc := database.NewAccount("test")
+	return NewPendingBlock(database.Hash{}, 0, []database.Tx{
+		*database.NewTx(database.Account("andrej"), database.Account("taras"), "", 3),
+	}, minerAcc)
+}
+
 func TestMine(t *testing.T) {
 	pendingBlock := createRandomPendingBlock()
 

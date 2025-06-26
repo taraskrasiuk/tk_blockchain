@@ -22,11 +22,11 @@ func addMigrationCmd() *cobra.Command {
 			block0 := database.NewBlock(database.Hash{}, 0, 0x0123, []database.Tx{
 				*database.NewTx(database.Account("andrej"), database.Account("andrej"), "", 3),
 				*database.NewTx(database.Account("andrej"), database.Account("andrej"), "reward", 700),
-			})
+			}, database.NewAccount("miner"))
 
 			s.AddBlock(block0)
 
-			block0Hash, err := s.Persist()
+			block0Hash, err := s.Persist(block0.Header.Miner)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -41,11 +41,11 @@ func addMigrationCmd() *cobra.Command {
 				*database.NewTx("babayaga", "andrej", "", 50),
 				*database.NewTx("andrej", "andrej", "reward", 600),
 				*database.NewTx("andrej", "andrej", "reward", 2600),
-			})
+			}, database.NewAccount("miner"))
 
 			s.AddBlock(block1)
 
-			block1Hash, err := s.Persist()
+			block1Hash, err := s.Persist(block1.Header.Miner)
 			if err != nil {
 				log.Fatal(err)
 			}

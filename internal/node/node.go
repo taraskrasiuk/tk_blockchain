@@ -30,13 +30,14 @@ type Node struct {
 	pendingTXs        map[string]database.Tx
 	archivedTXs       map[string]database.Tx
 	newSyncedBlocksCh chan database.Block
-	newPendingTXsCh   chan database.Tx
 	isMining          bool
+	miner             database.Account
 	// public
 	IsBootstrap bool
 }
 
-func NewNode(datadir string, port uint, ip string, bootstrap *PeerNode, hasGenesisFile bool) *Node {
+// TODO: remove hasGenesisFile
+func NewNode(datadir string, port uint, ip string, bootstrap *PeerNode, miner database.Account, hasGenesisFile bool) *Node {
 	node := &Node{
 		dirname:           datadir,
 		ip:                ip,
@@ -46,8 +47,8 @@ func NewNode(datadir string, port uint, ip string, bootstrap *PeerNode, hasGenes
 		pendingTXs:        make(map[string]database.Tx),
 		archivedTXs:       make(map[string]database.Tx),
 		newSyncedBlocksCh: make(chan database.Block),
-		newPendingTXsCh:   make(chan database.Tx, 500),
 		isMining:          false,
+		miner:             miner,
 	}
 
 	if bootstrap != nil {
@@ -251,11 +252,7 @@ func (n *Node) ViewSyncBlocks(afterHash database.Hash) (SyncBlocksRes, error) {
 // Node mining process.
 func (n *Node) mine(ctx context.Context) error {
 	// The time interval
-	d := MINE_PENDING_INTERVAL_DURATION
-	if n.IsBootstrap {
-		d = 60 * time.Second
-	}
-	ticker := time.NewTicker(d)
+	ticker := time.NewTicker(MINE_PENDING_INTERVAL_DURATION)
 	var (
 		innerContext      context.Context
 		cancelContextFunc context.CancelFunc
@@ -310,7 +307,8 @@ func (n *Node) removeMindedPendingTXs(block database.Block) error {
 }
 
 func (n *Node) processPendingTXs(ctx context.Context) error {
-	pendingBlock := NewPendingBlock(*n.state.GetLastHash(), n.state.NextBlockNumber(), n.pendingTXsToArray())
+	
+	pendingBlock := NewPendingBlock(*n.state.GetLastHash(), n.state.NextBlockNumber(), n.pendingTXsToArray(), n.miner)
 	minedBlock, err := Mine(ctx, pendingBlock)
 	if err != nil {
 		return err

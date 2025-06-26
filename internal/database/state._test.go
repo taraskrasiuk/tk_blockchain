@@ -53,9 +53,9 @@ func setup() error {
 	block0 := NewBlock(Hash{}, 1, 0x0123, []Tx{
 		*NewTx(Account("andrej"), Account("andrej"), "", 3),
 		*NewTx(Account("andrej"), Account("andrej"), "reward", 700),
-	})
+	}, Account("miner"))
 	s.AddBlock(block0)
-	block0Hash, err := s.Persist()
+	block0Hash, err := s.Persist(block0.Header.Miner)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,9 +66,9 @@ func setup() error {
 		*NewTx("babayaga", "caesar", "", 1000),
 		*NewTx("babayaga", "andrej", "", 50),
 		*NewTx("andrej", "andrej", "reward", 600),
-	})
+	}, Account("miner"))
 	s.AddBlock(block1)
-	s.Persist()
+	s.Persist(block1.Header.Miner)
 	return nil
 }
 

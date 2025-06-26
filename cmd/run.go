@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"taraskrasiuk/blockchain_l/internal/database"
 	"taraskrasiuk/blockchain_l/internal/node"
 	"taraskrasiuk/blockchain_l/internal/server"
 
@@ -15,13 +16,13 @@ const (
 	BOOTSTRAP_NODE_BY_DEFAULT = false
 )
 
-func runBootstrapNode(cmd *cobra.Command, datadir, host string, port uint) error {
-	srv := server.NewNodeServer(node.NewNode(datadir, port, host, nil, true), port)
+func runBootstrapNode(cmd *cobra.Command, datadir, host string, port uint, miner string) error {
+	srv := server.NewNodeServer(node.NewNode(datadir, port, host, nil, database.NewAccount(miner), true), port)
 
 	return srv.Run(cmd.Context())
 }
 
-func runPeerNode(cmd *cobra.Command, datadir, host string, port uint) error {
+func runPeerNode(cmd *cobra.Command, datadir, host string, port uint, miner string) error {
 	bootstrapIp, err := cmd.Flags().GetString("bootstrapIp")
 	if err != nil {
 		return err
@@ -34,7 +35,7 @@ func runPeerNode(cmd *cobra.Command, datadir, host string, port uint) error {
 	boostrap := node.NewPeerNode(bootstrapIp, bootstrapPort, true, false)
 	fmt.Printf("successfully added the bootstrap node with ip %s and port %d \n", bootstrapIp, bootstrapPort)
 
-	srv := server.NewNodeServer(node.NewNode(datadir, port, host, boostrap, true), port)
+	srv := server.NewNodeServer(node.NewNode(datadir, port, host, boostrap, database.NewAccount(miner), true), port)
 	if err := srv.Run(cmd.Context()); err != nil {
 		return err
 	}
@@ -51,16 +52,17 @@ func addRunCmd() *cobra.Command {
 				port, _        = cmd.Flags().GetUint("port")
 				host, _        = cmd.Flags().GetString("host")
 				isBootstrap, _ = cmd.Flags().GetBool("bootstrap")
+				miner, _       = cmd.Flags().GetString("miner")
 			)
 
 			if isBootstrap {
 				fmt.Printf("Running a bootstrap node %s and port %d\n", datadir, port)
-				if err := runBootstrapNode(cmd, datadir, host, port); err != nil {
+				if err := runBootstrapNode(cmd, datadir, host, port, miner); err != nil {
 					log.Fatal(err)
 				}
 			} else {
 				fmt.Printf("Running a peer node with dir: %s, host %s and port %d\n", datadir, host, port)
-				if err := runPeerNode(cmd, datadir, host, port); err != nil {
+				if err := runPeerNode(cmd, datadir, host, port, miner); err != nil {
 					log.Fatal(err)
 				}
 			}
@@ -72,6 +74,8 @@ func addRunCmd() *cobra.Command {
 	cmd.MarkFlagRequired("port")
 	cmd.Flags().String("host", DEFAULT_HOST, "Define a host")
 	cmd.MarkFlagRequired("host")
+	cmd.Flags().String("miner", "", "define the miner account address")
+	cmd.MarkFlagRequired("miner")
 
 	cmd.Flags().Bool("bootstrap", BOOTSTRAP_NODE_BY_DEFAULT, "Is running a bootstrap node or not")
 	cmd.Flags().String("bootstrapIp", "", "The ip of the bootstrap node")

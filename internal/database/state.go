@@ -83,6 +83,10 @@ func (s *State) AddBlock(b Block) (Hash, error) {
 	s.lastBlockHash = blockHash
 	s.lastBlock = b
 
+	// reward for miner
+	logger.Printf("adjust miner reward for %s", b.Header.Miner)
+	s.Balances[b.Header.Miner] += 175 // mock reward
+
 	logger.Println("done adding a block")
 
 	return blockHash, nil
@@ -92,9 +96,9 @@ func (s *State) GetMemPool() []Tx {
 	return s.txMempool
 }
 
-func (s *State) Persist() (Hash, error) {
+func (s *State) Persist(miner Account) (Hash, error) {
 	// create a new block, and set a parent block's hash
-	b := NewBlock(s.lastBlockHash, s.lastBlock.Header.Number+1, 0x0123, s.txMempool)
+	b := NewBlock(s.lastBlockHash, s.lastBlock.Header.Number+1, 0x0123, s.txMempool, miner)
 	bhash, err := b.Hash()
 	if err != nil {
 		return Hash{}, err
