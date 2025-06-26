@@ -10,10 +10,10 @@ import (
 	"time"
 )
 
-const (
-	SYNC_TIME_TIMEOUT              = 10 * time.Second
-	MINE_PENDING_INTERVAL_DURATION = 20 * time.Second
-	DefaultHTTPport                = 8080
+var (
+	SYNC_TIME_TIMEOUT     = 10 * time.Second
+	MINE_PENDING_INTERVAL = 20 * time.Second
+	DefaultHTTPport       = 8080
 )
 
 // Node Config
@@ -66,9 +66,9 @@ func (n *Node) Run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	// assign a state to node
 	n.state = state
-
 	// run sync
 	go n.sync(ctx)
 	go n.mine(ctx)
@@ -252,7 +252,7 @@ func (n *Node) ViewSyncBlocks(afterHash database.Hash) (SyncBlocksRes, error) {
 // Node mining process.
 func (n *Node) mine(ctx context.Context) error {
 	// The time interval
-	ticker := time.NewTicker(MINE_PENDING_INTERVAL_DURATION)
+	ticker := time.NewTicker(MINE_PENDING_INTERVAL)
 	var (
 		innerContext      context.Context
 		cancelContextFunc context.CancelFunc
@@ -307,7 +307,7 @@ func (n *Node) removeMindedPendingTXs(block database.Block) error {
 }
 
 func (n *Node) processPendingTXs(ctx context.Context) error {
-	
+
 	pendingBlock := NewPendingBlock(*n.state.GetLastHash(), n.state.NextBlockNumber(), n.pendingTXsToArray(), n.miner)
 	minedBlock, err := Mine(ctx, pendingBlock)
 	if err != nil {

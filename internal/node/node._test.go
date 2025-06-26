@@ -2,9 +2,12 @@ package node
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"sync"
 	"taraskrasiuk/blockchain_l/internal/database"
 	"testing"
+	"time"
 )
 
 // change db files which state uses.
@@ -61,13 +64,172 @@ func clear() {
 
 var testDir = "ttest"
 
-func TestAddPendingTransaction(t *testing.T) {
+func TestNode_Run(t *testing.T) {
 	setup()
 	defer clear()
 
-	ctx := context.Background()
-	n := NewNode(testDir, 8080, "", nil, database.NewAccount("test"), true)
+	pctx := context.Background()
+	ctx, cancel := context.WithTimeout(pctx, 5*time.Second)
+	defer cancel()
+
+	miner := database.Account("miner")
+	n := NewNode(testDir, 8080, "", nil, miner, true)
 	if err := n.Run(ctx); err != nil {
-		panic(err)
+		t.Fatal(err)
+	}
+}
+
+func TestNode_Mining(t *testing.T) {
+	setup()
+	defer clear()
+
+	miner := database.Account("miner")
+	peerNode := NewPeerNode("localhost", 8080, true, true)
+	n := NewNode(testDir, 8081, "localhost", peerNode, miner, true)
+	pctx := context.Background()
+	ctx, cancel := context.WithTimeout(pctx, 60*time.Second)
+	defer cancel()
+
+	var wg sync.WaitGroup
+	wg.Add(3)
+	// create 1 transaction
+	go func() {
+		defer wg.Done()
+		time.Sleep(2 * time.Second)
+		tx := database.NewTx(database.Account("andrej"), database.Account("taras"), "", 100)
+
+		if err := n.AddPendingTX(*tx); err != nil {
+			panic(err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		time.Sleep(6 * time.Second)
+		tx := database.NewTx(database.Account("andrej"), database.Account("taras"), "", 300)
+
+		if err := n.AddPendingTX(*tx); err != nil {
+			panic(err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(5 * time.Second)
+
+		for {
+			select {
+			case <-ticker.C:
+				if n.state.GetLastBlock().Header.Number == 1 {
+					fmt.Println("height : ", n.state.GetLastBlock().Header.Number)
+					if err := n.Close(); err != nil {
+						panic(err)
+					}
+					return
+				}
+			}
+		}
+	}()
+
+	if err := n.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	wg.Wait()
+	if n.state.GetLastBlock().Header.Number > 1 {
+		t.Fatalf("expected a block heaight to be 1 but got %d", n.state.GetLastBlock().Header.Number)
+	}
+}
+
+func TestNode_MiningStopsOnNewSyncedBlock(t *testing.T) {
+	MINE_PENDING_INTERVAL = 10 * time.Second
+	setup()
+	defer clear()
+	var wg sync.WaitGroup
+
+	tarasAcc := database.Account("taras")
+	p := NewPeerNode("localhost", 8080, true, false)
+	n := NewNode(testDir, 8081, "localhost", p, tarasAcc, true)
+
+	tx1 := database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 100)
+	tx2 := database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 5)
+	tx2Hash, _ := tx2.Hash()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	firstPendingBlock := NewPendingBlock(database.Hash{}, 0, []database.Tx{*tx1}, tarasAcc)
+	validSyncedBlock, err := Mine(ctx, firstPendingBlock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		time.Sleep(MINE_PENDING_INTERVAL - (MINE_PENDING_INTERVAL / 4))
+		err := n.AddPendingTX(*tx1)
+		if err != nil {
+			panic(err)
+		}
+		err = n.AddPendingTX(*tx2)
+		if err != nil {
+			panic(err)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		time.Sleep(MINE_PENDING_INTERVAL + (2 * time.Second))
+		if !n.isMining {
+			panic("should be mining")
+		}
+		_, err := n.state.AddBlock(validSyncedBlock)
+		if err != nil {
+			panic(err)
+		}
+		n.newSyncedBlocksCh <- validSyncedBlock
+
+		time.Sleep(time.Second * 2)
+		if n.isMining {
+			t.Fatal("synced block should have canceled mining")
+		}
+		// Mined TX1 by Andrej should be removed from the Mempool
+		_, onlyTX2IsPending := n.pendingTXs[tx2Hash.String()]
+		if len(n.pendingTXs) != 1 && !onlyTX2IsPending {
+			t.Fatal("TX1 should be still pending")
+		}
+		time.Sleep(MINE_PENDING_INTERVAL * 2)
+		if !n.isMining {
+			t.Fatal("should attempt to mine TX1 again")
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		// Regularly check whenever both TXs are now mined
+		ticker := time.NewTicker(time.Second * 10)
+		for {
+			select {
+			case <-ticker.C:
+				if n.state.GetLastBlock().Header.Number == 1 {
+					if err := n.Close(); err != nil {
+						panic(err)
+					}
+					return
+				}
+			}
+		}
+	}()
+
+	if err := n.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	wg.Wait()
+
+	if n.state.GetLastBlock().Header.Number > 1 {
+		t.Fatalf("expected a block heaight to be 1 but got %d", n.state.GetLastBlock().Header.Number)
+	}
+	// check miner balance
+	balance := n.state.Balances[tarasAcc]
+	expectedBalance := 105 + 175 + 175
+	if balance != uint(expectedBalance) /* with 2 rewards */ {
+		t.Fatalf("expected balance for miner account to be %d but got %d", expectedBalance, balance)
 	}
 }

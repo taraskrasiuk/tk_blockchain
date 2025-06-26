@@ -36,9 +36,9 @@ func NewBlock(parentHash Hash, num uint64, nonce uint32, payload []Tx, miner Acc
 		Nonce:      nonce,
 		Miner:      miner,
 	}
-	for _, t := range payload {
-		logger.Printf("new block with tx: from: %s, to: %s, value: %d\n", t.From, t.To, t.Value)
-	}
+	// for _, t := range payload {
+	// 	logger.Printf("new block with tx: from: %s, to: %s, value: %d\n", t.From, t.To, t.Value)
+	// }
 	return Block{
 		Header:  h,
 		Payload: payload,
@@ -70,8 +70,8 @@ type BlockFS struct {
 func IsValidBlock(h Hash) bool {
 	return fmt.Sprintf("%x", h[0]) == "0" &&
 		fmt.Sprintf("%x", h[1]) == "0" &&
-		// fmt.Sprintf("%x", h[2]) == "0" &&
+		fmt.Sprintf("%x", h[2]) == "0" &&
 		// fmt.Sprintf("%x", h[3]) == "0" &&
 		// not equal to zero
-		fmt.Sprintf("%x", h[2]) != "0"
+		fmt.Sprintf("%x", h[3]) != "0"
 }

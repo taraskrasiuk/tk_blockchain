@@ -23,6 +23,7 @@ func NewState(dirname string, hasGenesisBlock bool) (*State, error) {
 	s := State{
 		Balances:        make(map[Account]uint),
 		hasGenesisBlock: hasGenesisBlock,
+		lastBlockHash:   Hash{},
 	}
 
 	if err := initDbDirStructureIfNotExist(dirname); err != nil {

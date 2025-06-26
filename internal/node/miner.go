@@ -51,9 +51,8 @@ func Mine(ctx context.Context, p *PendingBlock) (database.Block, error) {
 		nonce = generateNonce()
 
 		if attempt%1_000_000 == 0 || attempt == 1 {
-			fmt.Printf("Mining Pending TXs with attempt %d", attempt)
+			fmt.Printf("Mining Pending TXs with attempt %d\n", attempt)
 		}
-		fmt.Println("nonce: == ", nonce)
 		block = database.NewBlock(p.parent, p.number, nonce, p.txs, p.miner)
 		blockHash, err := block.Hash()
 		if err != nil {
@@ -62,7 +61,7 @@ func Mine(ctx context.Context, p *PendingBlock) (database.Block, error) {
 		}
 		hash = blockHash
 	}
-	fmt.Printf("\nMined new Block '%x' using PoW%s:\n", hash, hash)
+	fmt.Printf("\nMined new Block '%x'\n using PoW%s:\n", hash, hash)
 	fmt.Printf("\tHeight: '%v'\n", block.Header.Number)
 	fmt.Printf("\tNonce: '%v'\n", block.Header.Nonce)
 	fmt.Printf("\tCreated: '%v'\n", block.Header.Time)
