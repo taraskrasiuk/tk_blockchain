@@ -72,7 +72,7 @@ func TestNode_Run(t *testing.T) {
 	ctx, cancel := context.WithTimeout(pctx, 5*time.Second)
 	defer cancel()
 
-	miner := database.Account("miner")
+	miner := database.NewAccount("miner")
 	n := NewNode(testDir, 8080, "", nil, miner, true)
 	if err := n.Run(ctx); err != nil {
 		t.Fatal(err)
@@ -83,7 +83,7 @@ func TestNode_Mining(t *testing.T) {
 	setup()
 	defer clear()
 
-	miner := database.Account("miner")
+	miner := database.NewAccount("miner")
 	peerNode := NewPeerNode("localhost", 8080, true, true)
 	n := NewNode(testDir, 8081, "localhost", peerNode, miner, true)
 	pctx := context.Background()
@@ -96,7 +96,7 @@ func TestNode_Mining(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		time.Sleep(2 * time.Second)
-		tx := database.NewTx(database.Account("andrej"), database.Account("taras"), "", 100)
+		tx := database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 100)
 
 		if err := n.AddPendingTX(*tx); err != nil {
 			panic(err)
@@ -106,7 +106,7 @@ func TestNode_Mining(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		time.Sleep(6 * time.Second)
-		tx := database.NewTx(database.Account("andrej"), database.Account("taras"), "", 300)
+		tx := database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 300)
 
 		if err := n.AddPendingTX(*tx); err != nil {
 			panic(err)
@@ -146,7 +146,7 @@ func TestNode_MiningStopsOnNewSyncedBlock(t *testing.T) {
 	defer clear()
 	var wg sync.WaitGroup
 
-	tarasAcc := database.Account("taras")
+	tarasAcc := database.NewAccount("taras")
 	p := NewPeerNode("localhost", 8080, true, false)
 	n := NewNode(testDir, 8081, "localhost", p, tarasAcc, true)
 

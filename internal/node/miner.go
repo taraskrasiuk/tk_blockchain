@@ -18,10 +18,6 @@ type PendingBlock struct {
 }
 
 func NewPendingBlock(h database.Hash, n uint64, txs []database.Tx, miner database.Account) *PendingBlock {
-	fmt.Println("MINER: ", miner)
-	if miner == "" {
-		panic("The miner is an empty string")
-	}
 	return &PendingBlock{h, n, uint64(time.Now().UnixMilli()), txs, miner}
 }
 

@@ -4,13 +4,15 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Account
-type Account string
+type Account common.Address
 
 func NewAccount(name string) Account {
-	return Account(name)
+	return Account(common.BytesToAddress([]byte(name)))
 }
 
 // Transaction

@@ -25,4 +25,5 @@ func init() {
 	rootCmd.AddCommand(addRunCmd())
 	rootCmd.AddCommand(addMigrationCmd())
 	rootCmd.AddCommand(addNodeCmd())
+	rootCmd.AddCommand(addWalletCmd())
 }

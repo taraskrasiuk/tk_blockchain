@@ -7,6 +7,8 @@ import (
 	"io"
 	"os"
 	"reflect"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type State struct {
@@ -224,9 +226,9 @@ func (s *State) loadGenesisFile(dirname string) error {
 	}
 
 	type genesisResource struct {
-		GenesisTime string          `json:"genesis_time"`
-		ChainID     string          `json:"chain_id"`
-		Balances    map[string]uint `json:"balances"`
+		GenesisTime string                  `json:"genesis_time"`
+		ChainID     string                  `json:"chain_id"`
+		Balances    map[common.Address]uint `json:"balances"`
 	}
 
 	var genesisData genesisResource

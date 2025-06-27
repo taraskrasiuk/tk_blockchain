@@ -20,8 +20,8 @@ func addMigrationCmd() *cobra.Command {
 			defer s.Close()
 
 			block0 := database.NewBlock(database.Hash{}, 0, 0x0123, []database.Tx{
-				*database.NewTx(database.Account("andrej"), database.Account("andrej"), "", 3),
-				*database.NewTx(database.Account("andrej"), database.Account("andrej"), "reward", 700),
+				*database.NewTx(database.NewAccount("andrej"), database.NewAccount("andrej"), "", 3),
+				*database.NewTx(database.NewAccount("andrej"), database.NewAccount("andrej"), "reward", 700),
 			}, database.NewAccount("miner"))
 
 			s.AddBlock(block0)
@@ -34,13 +34,13 @@ func addMigrationCmd() *cobra.Command {
 			fmt.Printf("parent block hash: %x\n", block0.Header.ParentHash)
 
 			block1 := database.NewBlock(block0Hash, 1, 0x0123, []database.Tx{
-				*database.NewTx("andrej", "babayaga", "", 2000),
-				*database.NewTx("andrej", "andrej", "reward", 100),
-				*database.NewTx("babayaga", "andrej", "", 1),
-				*database.NewTx("babayaga", "caesar", "", 1000),
-				*database.NewTx("babayaga", "andrej", "", 50),
-				*database.NewTx("andrej", "andrej", "reward", 600),
-				*database.NewTx("andrej", "andrej", "reward", 2600),
+				*database.NewTx(database.NewAccount("andrej"), database.NewAccount("babayaga"), "", 2000),
+				*database.NewTx(database.NewAccount("andrej"), database.NewAccount("andrej"), "reward", 100),
+				*database.NewTx(database.NewAccount("babayaga"), database.NewAccount("andrej"), "", 1),
+				*database.NewTx(database.NewAccount("babayaga"), database.NewAccount("caesar"), "", 1000),
+				*database.NewTx(database.NewAccount("babayaga"), database.NewAccount("andrej"), "", 50),
+				*database.NewTx(database.NewAccount("andrej"), database.NewAccount("andrej"), "reward", 600),
+				*database.NewTx(database.NewAccount("andrej"), database.NewAccount("andrej"), "reward", 2600),
 			}, database.NewAccount("miner"))
 
 			s.AddBlock(block1)

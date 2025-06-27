@@ -1,0 +1,7 @@
+{
+	"genesis_time": "2025-06-27T14:02:40+03:00",
+	"chain_id": "bb ledger",
+	"balances": {
+    	"andrej": 1000000
+    }
+}

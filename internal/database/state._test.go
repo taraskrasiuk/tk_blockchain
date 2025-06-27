@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -51,22 +52,22 @@ func setup() error {
 
 	s, _ := NewState(testDbDir, true)
 	block0 := NewBlock(Hash{}, 1, 0x0123, []Tx{
-		*NewTx(Account("andrej"), Account("andrej"), "", 3),
-		*NewTx(Account("andrej"), Account("andrej"), "reward", 700),
-	}, Account("miner"))
+		*NewTx(NewAccount("andrej"), NewAccount("andrej"), "", 3),
+		*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 700),
+	}, NewAccount("miner"))
 	s.AddBlock(block0)
 	block0Hash, err := s.Persist(block0.Header.Miner)
 	if err != nil {
 		log.Fatal(err)
 	}
 	block1 := NewBlock(block0Hash, 2, 0x0123, []Tx{
-		*NewTx("andrej", "babayaga", "", 2000),
-		*NewTx("andrej", "andrej", "reward", 100),
-		*NewTx("babayaga", "andrej", "", 1),
-		*NewTx("babayaga", "caesar", "", 1000),
-		*NewTx("babayaga", "andrej", "", 50),
-		*NewTx("andrej", "andrej", "reward", 600),
-	}, Account("miner"))
+		*NewTx(NewAccount("andrej"), NewAccount("babayaga"), "", 2000),
+		*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 100),
+		*NewTx(NewAccount("babayaga"), NewAccount("andrej"), "", 1),
+		*NewTx(NewAccount("babayaga"), NewAccount("caesar"), "", 1000),
+		*NewTx(NewAccount("babayaga"), NewAccount("andrej"), "", 50),
+		*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 600),
+	}, NewAccount("miner"))
 	s.AddBlock(block1)
 	s.Persist(block1.Header.Miner)
 	return nil
@@ -93,12 +94,17 @@ func TestState(t *testing.T) {
 	state, _ := NewState(testDbDir, true)
 
 	expectedBalance := 999451
-	if state.Balances["andrej"] != uint(expectedBalance) {
-		t.Fatalf("expected the balance for andrej to be %d but got %d", expectedBalance, state.Balances["andrej"])
+	if state.Balances[NewAccount("andrej")] != uint(expectedBalance) {
+		t.Fatalf("expected the balance for andrej to be %d but got %d", expectedBalance, state.Balances[NewAccount("andrej")])
 	}
 
 	expectedBalance = 949
-	if state.Balances["babayaga"] != uint(expectedBalance) {
-		t.Fatalf("expected the balance for babayaga to be %d but got %d", expectedBalance, state.Balances["babayaga"])
+	if state.Balances[NewAccount("babayaga")] != uint(expectedBalance) {
+		t.Fatalf("expected the balance for babayaga to be %d but got %d", expectedBalance, state.Balances[NewAccount("babayaga")])
 	}
+}
+
+func Test_Acc(t *testing.T) {
+	a := NewAccount("qwe")
+	fmt.Println(a)
 }

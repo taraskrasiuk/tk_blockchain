@@ -77,7 +77,7 @@ func (h *HttpNodeHandler) handlerTxAddRequest(w http.ResponseWriter, r *http.Req
 	}
 	defer r.Body.Close()
 
-	tx := database.NewTx(database.Account(txReqBody.From), database.Account(txReqBody.To), txReqBody.Data, txReqBody.Value)
+	tx := database.NewTx(database.NewAccount(txReqBody.From), database.NewAccount(txReqBody.To), txReqBody.Data, txReqBody.Value)
 	txHash, err := tx.Hash()
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "could not create a new pending transcation"+err.Error())
