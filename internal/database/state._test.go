@@ -51,25 +51,24 @@ func setup() error {
 	blocksFile = "utest_" + blocksFile
 
 	s, _ := NewState(testDbDir, true)
-	block0 := NewBlock(Hash{}, 1, 0x0123, []Tx{
-		*NewTx(NewAccount("andrej"), NewAccount("andrej"), "", 3),
-		*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 700),
+	block0 := NewBlock(Hash{}, 1, 0x0123, []SignedTx{
+		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "", 3), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 700), []byte{}),
 	}, NewAccount("miner"))
 	s.AddBlock(block0)
-	block0Hash, err := s.Persist(block0.Header.Miner)
+	block0Hash, err := s.AddBlock(block0)
 	if err != nil {
 		log.Fatal(err)
 	}
-	block1 := NewBlock(block0Hash, 2, 0x0123, []Tx{
-		*NewTx(NewAccount("andrej"), NewAccount("babayaga"), "", 2000),
-		*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 100),
-		*NewTx(NewAccount("babayaga"), NewAccount("andrej"), "", 1),
-		*NewTx(NewAccount("babayaga"), NewAccount("caesar"), "", 1000),
-		*NewTx(NewAccount("babayaga"), NewAccount("andrej"), "", 50),
-		*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 600),
+	block1 := NewBlock(block0Hash, 2, 0x0123, []SignedTx{
+		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("babayaga"), "", 2000), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 100), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("babayaga"), NewAccount("andrej"), "", 1), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("babayaga"), NewAccount("caesar"), "", 1000), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("babayaga"), NewAccount("andrej"), "", 50), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 600), []byte{}),
 	}, NewAccount("miner"))
 	s.AddBlock(block1)
-	s.Persist(block1.Header.Miner)
 	return nil
 }
 

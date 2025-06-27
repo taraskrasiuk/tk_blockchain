@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"taraskrasiuk/blockchain_l/internal/database"
 	"taraskrasiuk/blockchain_l/internal/node"
+	"taraskrasiuk/blockchain_l/internal/wallet"
 )
 
 type HttpNodeHandler struct {
@@ -63,10 +64,11 @@ func (h *HttpNodeHandler) handlerSync(w http.ResponseWriter, r *http.Request) {
 // ===== POST /tx/add
 func (h *HttpNodeHandler) handlerTxAddRequest(w http.ResponseWriter, r *http.Request) {
 	type reqBody struct {
-		From  string `json:"from"`
-		To    string `json:"to"`
-		Data  string `json:"data"`
-		Value uint   `json:"value"`
+		From    string `json:"from"`
+		FromPWD string `json:"from_pwd"`
+		To      string `json:"to"`
+		Data    string `json:"data"`
+		Value   uint   `json:"value"`
 	}
 
 	var txReqBody reqBody
@@ -77,13 +79,19 @@ func (h *HttpNodeHandler) handlerTxAddRequest(w http.ResponseWriter, r *http.Req
 	}
 	defer r.Body.Close()
 
-	tx := database.NewTx(database.NewAccount(txReqBody.From), database.NewAccount(txReqBody.To), txReqBody.Data, txReqBody.Value)
+	var (
+		from = database.NewAccount(txReqBody.From)
+		to   = database.NewAccount(txReqBody.To)
+	)
+	tx := database.NewTx(from, to, txReqBody.Data, txReqBody.Value)
 	txHash, err := tx.Hash()
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "could not create a new pending transcation"+err.Error())
 		return
 	}
-	if err := h.node.AddPendingTX(*tx); err != nil {
+	// create a signed transaction
+	signedTx, err := wallet.SignTxWithKeystoreAccount(*tx, from, txReqBody.FromPWD, wallet.GetKeystoreDirPath(h.node.Dirname()))
+	if err := h.node.AddPendingTX(signedTx); err != nil {
 		writeErr(w, http.StatusBadRequest, "could not create a new transaction due to: "+err.Error())
 		return
 	}

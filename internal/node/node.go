@@ -27,8 +27,8 @@ type Node struct {
 	knownPeers     map[string]PeerNode
 	hasGenesisFile bool // TODO: probably no need
 	// mining
-	pendingTXs        map[string]database.Tx
-	archivedTXs       map[string]database.Tx
+	pendingTXs        map[string]database.SignedTx
+	archivedTXs       map[string]database.SignedTx
 	newSyncedBlocksCh chan database.Block
 	isMining          bool
 	miner             database.Account
@@ -44,8 +44,8 @@ func NewNode(datadir string, port uint, ip string, bootstrap *PeerNode, miner da
 		port:              port,
 		knownPeers:        make(map[string]PeerNode),
 		hasGenesisFile:    hasGenesisFile,
-		pendingTXs:        make(map[string]database.Tx),
-		archivedTXs:       make(map[string]database.Tx),
+		pendingTXs:        make(map[string]database.SignedTx),
+		archivedTXs:       make(map[string]database.SignedTx),
 		newSyncedBlocksCh: make(chan database.Block),
 		isMining:          false,
 		miner:             miner,
@@ -225,7 +225,7 @@ type NodeStatusRes struct {
 	BlockHash   string              `json:"block_hash"`
 	BlockNumber uint64              `json:"block_number"`
 	KnownPeers  map[string]PeerNode `json:"known_peers"`
-	PendingTXs  []database.Tx       `json:"pendingTXs"`
+	PendingTXs  []database.SignedTx `json:"pendingTXs"`
 }
 
 func (n *Node) ViewNodeStatus() NodeStatusRes {
@@ -325,10 +325,10 @@ func (n *Node) processPendingTXs(ctx context.Context) error {
 	return nil
 }
 
-func (n *Node) AddPendingTX(tx database.Tx) error {
-	if err := n.state.IsValidTX(tx); err != nil {
-		return err
-	}
+func (n *Node) AddPendingTX(tx database.SignedTx) error {
+	// if err := n.state.IsValidTX(tx); err != nil {
+	// 	return err
+	// }
 	txHash, err := tx.Hash()
 	if err != nil {
 		return err
@@ -347,8 +347,8 @@ func (n *Node) AddPendingTX(tx database.Tx) error {
 	return nil
 }
 
-func (n *Node) pendingTXsToArray() []database.Tx {
-	result := make([]database.Tx, len(n.pendingTXs))
+func (n *Node) pendingTXsToArray() []database.SignedTx {
+	result := make([]database.SignedTx, len(n.pendingTXs))
 	i := 0
 	for _, tx := range n.pendingTXs {
 		result[i] = tx
@@ -356,4 +356,8 @@ func (n *Node) pendingTXsToArray() []database.Tx {
 	}
 
 	return result
+}
+
+func (n *Node) Dirname() string {
+	return n.dirname
 }

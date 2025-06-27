@@ -7,18 +7,20 @@ import (
 	"time"
 )
 
-func createTx(from, to string, value uint) Tx {
-	return Tx{
-		From:      NewAccount(from),
-		To:        NewAccount(to),
-		Value:     value,
-		CreatedAt: time.Now().Format(time.RFC3339),
+func createTx(from, to string, value uint) SignedTx {
+	return SignedTx{
+		Tx: Tx{
+			From:      NewAccount(from),
+			To:        NewAccount(to),
+			Value:     value,
+			CreatedAt: time.Now().Format(time.RFC3339),
+		},
 	}
 }
 
 func TestNewBlock(t *testing.T) {
 	parentHash := Hash{}
-	txs := []Tx{
+	txs := []SignedTx{
 		createTx("from", "to", 100),
 	}
 	block0 := NewBlock(parentHash, 1, 0x0123, txs, NewAccount("miner"))
@@ -29,7 +31,7 @@ func TestNewBlock(t *testing.T) {
 	// if !reflect.DeepEqual(block0.Header.ParentHash, Hash{}) {
 	// 	t.Fatalf("the parent hash is not correct, expected %x but got %x", Hash{}, block0.Header.ParentHash)
 	// }
-	block1 := NewBlock(bhash0, 2, 0x0000123, append(txs, []Tx{createTx("from-2", "to2", 200)}...), NewAccount("miner"))
+	block1 := NewBlock(bhash0, 2, 0x0000123, append(txs, []SignedTx{createTx("from-2", "to2", 200)}...), NewAccount("miner"))
 	_, err = block1.Hash()
 	if err != nil {
 		t.Fatalf("got an error %v", err)

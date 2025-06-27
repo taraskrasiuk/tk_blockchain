@@ -25,10 +25,10 @@ func (h Hash) String() string {
 
 type Block struct {
 	Header  BlockHeader `json:"header"`
-	Payload []Tx        `json:"payload"`
+	Payload []SignedTx  `json:"payload"`
 }
 
-func NewBlock(parentHash Hash, num uint64, nonce uint32, payload []Tx, miner Account) Block {
+func NewBlock(parentHash Hash, num uint64, nonce uint32, payload []SignedTx, miner Account) Block {
 	h := BlockHeader{
 		ParentHash: parentHash,
 		Number:     num,
@@ -36,9 +36,6 @@ func NewBlock(parentHash Hash, num uint64, nonce uint32, payload []Tx, miner Acc
 		Nonce:      nonce,
 		Miner:      miner,
 	}
-	// for _, t := range payload {
-	// 	logger.Printf("new block with tx: from: %s, to: %s, value: %d\n", t.From, t.To, t.Value)
-	// }
 	return Block{
 		Header:  h,
 		Payload: payload,

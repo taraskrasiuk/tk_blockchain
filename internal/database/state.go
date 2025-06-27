@@ -12,8 +12,8 @@ import (
 )
 
 type State struct {
-	Balances  map[Account]uint
-	txMempool []Tx
+	Balances map[Account]uint
+	// txMempool []SignedTx
 
 	blockFile       *os.File
 	lastBlock       Block
@@ -45,13 +45,13 @@ func (s *State) Close() error {
 	return s.blockFile.Close()
 }
 
-func (s *State) Add(tx Tx) error {
-	if err := applyTx(tx, s); err != nil {
-		return err
-	}
-	s.txMempool = append(s.txMempool, tx)
-	return nil
-}
+// func (s *State) Add(tx SignedTx) error {
+// 	if err := applyTx(tx, s); err != nil {
+// 		return err
+// 	}
+// 	s.txMempool = append(s.txMempool, tx)
+// 	return nil
+// }
 
 func (s *State) AddBlock(b Block) (Hash, error) {
 	// make a temporary copy of the state, in order to avoid race conditions
@@ -95,36 +95,36 @@ func (s *State) AddBlock(b Block) (Hash, error) {
 	return blockHash, nil
 }
 
-func (s *State) GetMemPool() []Tx {
-	return s.txMempool
-}
+// func (s *State) GetMemPool() []SignedTx {
+// 	return s.txMempool
+// }
 
-func (s *State) Persist(miner Account) (Hash, error) {
-	// create a new block, and set a parent block's hash
-	b := NewBlock(s.lastBlockHash, s.lastBlock.Header.Number+1, 0x0123, s.txMempool, miner)
-	bhash, err := b.Hash()
-	if err != nil {
-		return Hash{}, err
-	}
-	blockFs := &BlockFS{
-		Key:   bhash,
-		Value: b,
-	}
-	// encode block to json
-	jsonBlock, err := json.Marshal(blockFs)
-	if err != nil {
-		return Hash{}, err
-	}
+// func (s *State) Persist(miner Account) (Hash, error) {
+// 	// create a new block, and set a parent block's hash
+// 	b := NewBlock(s.lastBlockHash, s.lastBlock.Header.Number+1, 0x0123, s.txMempool, miner)
+// 	bhash, err := b.Hash()
+// 	if err != nil {
+// 		return Hash{}, err
+// 	}
+// 	blockFs := &BlockFS{
+// 		Key:   bhash,
+// 		Value: b,
+// 	}
+// 	// encode block to json
+// 	jsonBlock, err := json.Marshal(blockFs)
+// 	if err != nil {
+// 		return Hash{}, err
+// 	}
 
-	if _, err := s.blockFile.Write(append(jsonBlock, '\n')); err != nil {
-		return Hash{}, err
-	}
+// 	if _, err := s.blockFile.Write(append(jsonBlock, '\n')); err != nil {
+// 		return Hash{}, err
+// 	}
 
-	s.lastBlockHash = bhash
-	s.lastBlock = blockFs.Value
+// 	s.lastBlockHash = bhash
+// 	s.lastBlock = blockFs.Value
 
-	return bhash, nil
-}
+// 	return bhash, nil
+// }
 
 func (s *State) GetLastHash() *Hash {
 	return &s.lastBlockHash
@@ -248,16 +248,16 @@ func (s *State) copy() State {
 	newState := State{}
 	newState.lastBlockHash = s.lastBlockHash
 	newState.lastBlock = s.lastBlock
-	newState.txMempool = make([]Tx, len(s.txMempool))
+	// newState.txMempool = make([]Tx, len(s.txMempool))
 	newState.Balances = make(map[Account]uint)
 
 	for acc, balance := range s.Balances {
 		newState.Balances[acc] = balance
 	}
 
-	for _, tx := range s.txMempool {
-		newState.txMempool = append(newState.txMempool, tx)
-	}
+	// for _, tx := range s.txMempool {
+	// 	newState.txMempool = append(newState.txMempool, tx)
+	// }
 	return newState
 }
 
@@ -281,12 +281,12 @@ func applyBlock(b Block, s *State) error {
 	return applyTXs(b.Payload, s)
 }
 
-func applyTXs(txs []Tx, s *State) error {
+func applyTXs(txs []SignedTx, s *State) error {
 	for _, tx := range txs {
 		if err := applyTx(tx, s); err != nil {
 			return err
 		}
-		s.txMempool = append(s.txMempool, tx)
+		// s.txMempool = append(s.txMempool, tx)
 	}
 	return nil
 }
@@ -298,7 +298,14 @@ func (s *State) IsValidTX(tx Tx) error {
 	return nil
 }
 
-func applyTx(tx Tx, s *State) error {
+func applyTx(tx SignedTx, s *State) error {
+	ok, err := tx.IsAuthentic()
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("wrong TX, Sender '%s' is forged", common.Address(tx.From).Hex())
+	}
 	if tx.IsReward() {
 		s.Balances[tx.To] += tx.Value
 		return nil

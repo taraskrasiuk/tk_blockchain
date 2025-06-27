@@ -1,18 +1,20 @@
 package database
 
 import (
+	"crypto/elliptic"
 	"crypto/sha256"
 	"encoding/json"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // Account
 type Account common.Address
 
 func NewAccount(name string) Account {
-	return Account(common.BytesToAddress([]byte(name)))
+	return Account(common.HexToAddress(name))
 }
 
 // Transaction
@@ -44,4 +46,37 @@ func (t *Tx) Encode() ([]byte, error) {
 
 func (t *Tx) IsReward() bool {
 	return t.Data == "reward"
+}
+
+// Signed Transaction
+type SignedTx struct {
+	Tx
+	Sig []byte `json:"signature"`
+}
+
+func NewSignedTx(tx Tx, sig []byte) *SignedTx {
+	return &SignedTx{tx, sig}
+}
+
+func (t *SignedTx) IsAuthentic() (bool, error) {
+	txHash, err := t.Tx.Hash()
+	if err != nil {
+		return false, err
+	}
+	recoveredPubKey, err := crypto.SigToPub(txHash[:], t.Sig)
+	if err != nil {
+		return false, err
+	}
+	recoveredPubKeyBytes := elliptic.Marshal(
+		crypto.S256(),
+		recoveredPubKey.X,
+		recoveredPubKey.Y,
+	)
+	recoveredPubKeyBytesHash := crypto.Keccak256(
+		recoveredPubKeyBytes[1:],
+	)
+	recoveredAccount := common.BytesToAddress(
+		recoveredPubKeyBytesHash[12:],
+	)
+	return recoveredAccount.Hex() == common.Address(t.Tx.From).Hex(), nil
 }

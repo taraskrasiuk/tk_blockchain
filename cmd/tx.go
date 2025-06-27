@@ -1,9 +1,12 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"taraskrasiuk/blockchain_l/internal/database"
+	"taraskrasiuk/blockchain_l/internal/node"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -39,7 +42,7 @@ func txAddCmd() *cobra.Command {
 			toAcc := database.NewAccount(to)
 
 			tx := database.NewTx(fromAcc, toAcc, data, value)
-
+			signedTx := database.NewSignedTx(*tx, []byte{})
 			s, err := database.NewState(dirname, true)
 			if err != nil {
 				log.Fatal(err)
@@ -47,19 +50,17 @@ func txAddCmd() *cobra.Command {
 			}
 			defer s.Close()
 
+			pendingBlock := node.NewPendingBlock(*s.GetLastHash(), s.NextBlockNumber(), []database.SignedTx{*signedTx}, database.NewAccount("miner"))
+			miningCtx, cancel := context.WithTimeout(cmd.Context(), 5*time.Minute)
+			defer cancel()
+			block, err := node.Mine(miningCtx, pendingBlock)
+			// bl := database.NewBlock(*s.GetLastHash(), s.NextBlockNumber(), nonce uint32, payload []database.SignedTx, miner database.Account)
 			// TODO: probably need to change the method to apply the pointer
 			// in order to avoid copying the values
-			if err := s.Add(*tx); err != nil {
+			if _, err := s.AddBlock(block); err != nil {
 				log.Fatal(err)
 				return
 			}
-			// save updated state back to file
-			snapshot, err := s.Persist(database.NewAccount("miner"))
-			if err != nil {
-				log.Fatal(err)
-				return
-			}
-			fmt.Printf("Snapshot: %x\n", snapshot)
 		},
 	}
 	cmd.Flags().String("from", "", "from what account to perform the transaction")

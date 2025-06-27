@@ -96,7 +96,7 @@ func TestNode_Mining(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		time.Sleep(2 * time.Second)
-		tx := database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 100)
+		tx := database.NewSignedTx(*database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 100), []byte{})
 
 		if err := n.AddPendingTX(*tx); err != nil {
 			panic(err)
@@ -106,7 +106,7 @@ func TestNode_Mining(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		time.Sleep(6 * time.Second)
-		tx := database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 300)
+		tx := database.NewSignedTx(*database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 300), []byte{})
 
 		if err := n.AddPendingTX(*tx); err != nil {
 			panic(err)
@@ -150,13 +150,13 @@ func TestNode_MiningStopsOnNewSyncedBlock(t *testing.T) {
 	p := NewPeerNode("localhost", 8080, true, false)
 	n := NewNode(testDir, 8081, "localhost", p, tarasAcc, true)
 
-	tx1 := database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 100)
-	tx2 := database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 5)
+	tx1 := database.NewSignedTx(*database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 100), []byte{})
+	tx2 := database.NewSignedTx(*database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 5), []byte{})
 	tx2Hash, _ := tx2.Hash()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
 	defer cancel()
 
-	firstPendingBlock := NewPendingBlock(database.Hash{}, 0, []database.Tx{*tx1}, tarasAcc)
+	firstPendingBlock := NewPendingBlock(database.Hash{}, 0, []database.SignedTx{*tx1}, tarasAcc)
 	validSyncedBlock, err := Mine(ctx, firstPendingBlock)
 	if err != nil {
 		t.Fatal(err)
