@@ -69,6 +69,26 @@ func addAccountCmd() *cobra.Command {
 	return cmd
 }
 
+func addListAccs() *cobra.Command {
+	var cmd = &cobra.Command{
+		Use:   "list-accounts",
+		Short: "List accounts",
+		Run: func(cmd *cobra.Command, args []string) {
+			var (
+				keydir, _ = cmd.Flags().GetString("keydir")
+			)
+			fmt.Println("keydir= ", keydir)
+			store := keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP)
+			for i, acc := range store.Accounts() {
+				fmt.Printf("Account '%d': \n %v \n-----\n", i, acc)
+			}
+		},
+	}
+
+	addRequiredKeyDirFlag(cmd)
+	return cmd
+}
+
 // Get PK key
 func addGetPKCmd() *cobra.Command {
 	var cmd = &cobra.Command{
@@ -106,5 +126,6 @@ func addWalletCmd() *cobra.Command {
 	}
 	cmd.AddCommand(addAccountCmd())
 	cmd.AddCommand(addGetPKCmd())
+	cmd.AddCommand(addListAccs())
 	return cmd
 }

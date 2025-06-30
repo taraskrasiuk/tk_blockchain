@@ -11,22 +11,20 @@ import (
 )
 
 // Account
-type Account common.Address
-
-func NewAccount(name string) Account {
-	return Account(common.HexToAddress(name))
+func NewAccount(name string) common.Address {
+	return common.HexToAddress(name)
 }
 
 // Transaction
 type Tx struct {
-	From      Account `json:"from"`
-	To        Account `json:"to"`
-	Value     uint    `json:"value"`
-	Data      string  `json:"data"`
-	CreatedAt string  `json:"createdAt"`
+	From      common.Address `json:"from"`
+	To        common.Address `json:"to"`
+	Value     uint           `json:"value"`
+	Data      string         `json:"data"`
+	CreatedAt string         `json:"createdAt"`
 }
 
-func NewTx(from, to Account, data string, value uint) *Tx {
+func NewTx(from, to common.Address, data string, value uint) *Tx {
 	createdAt := time.Now().Format(time.RFC3339)
 
 	return &Tx{from, to, value, data, createdAt}

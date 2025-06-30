@@ -8,6 +8,9 @@ import (
 	"sync"
 	"taraskrasiuk/blockchain_l/internal/database"
 	"time"
+
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var (
@@ -31,13 +34,13 @@ type Node struct {
 	archivedTXs       map[string]database.SignedTx
 	newSyncedBlocksCh chan database.Block
 	isMining          bool
-	miner             database.Account
+	miner             common.Address
 	// public
 	IsBootstrap bool
 }
 
 // TODO: remove hasGenesisFile
-func NewNode(datadir string, port uint, ip string, bootstrap *PeerNode, miner database.Account, hasGenesisFile bool) *Node {
+func NewNode(datadir string, port uint, ip string, bootstrap *PeerNode, miner common.Address, hasGenesisFile bool) *Node {
 	node := &Node{
 		dirname:           datadir,
 		ip:                ip,
@@ -210,8 +213,8 @@ func (n *Node) syncBlocks(ctx context.Context, p PeerNode, status GetPeerNodeSta
 
 // ==== node views
 type NodeBalancesListRes struct {
-	Hash    *database.Hash            `json:"hash"`
-	Balance map[database.Account]uint `json:"balances"`
+	Hash    *database.Hash          `json:"hash"`
+	Balance map[common.Address]uint `json:"balances"`
 }
 
 func (n *Node) ViewBalancesList() NodeBalancesListRes {
@@ -307,7 +310,6 @@ func (n *Node) removeMindedPendingTXs(block database.Block) error {
 }
 
 func (n *Node) processPendingTXs(ctx context.Context) error {
-
 	pendingBlock := NewPendingBlock(*n.state.GetLastHash(), n.state.NextBlockNumber(), n.pendingTXsToArray(), n.miner)
 	minedBlock, err := Mine(ctx, pendingBlock)
 	if err != nil {
@@ -360,4 +362,23 @@ func (n *Node) pendingTXsToArray() []database.SignedTx {
 
 func (n *Node) Dirname() string {
 	return n.dirname
+}
+
+// Wallet
+type WalletAccountView struct {
+	Addr string `json:"addr"`
+	Path string `json:"path"`
+}
+
+func (n *Node) WalletAccounts() []WalletAccountView {
+	store := keystore.NewKeyStore(n.dirname, keystore.StandardScryptN, keystore.StandardScryptP)
+
+	var res []WalletAccountView
+	for _, acc := range store.Accounts() {
+		res = append(res, WalletAccountView{
+			Addr: acc.Address.Hex(),
+			Path: acc.URL.Path,
+		})
+	}
+	return res
 }

@@ -37,6 +37,8 @@ func (s *NodeServer) Run(ctx context.Context) error {
 	mux.HandleFunc("GET /node/sync", nodeHandler.handlerSync)
 	mux.HandleFunc("GET /node/addpeer", nodeHandler.handlerAddPeer)
 
+	// keystore
+	mux.HandleFunc("GET /wallet/accounts", nodeHandler.handlerWalletAccounts)
 	withLogger := NewLoggerMiddleware(mux, os.Stdout)
 
 	return http.ListenAndServe(fmt.Sprintf(":%d", s.port), withLogger)

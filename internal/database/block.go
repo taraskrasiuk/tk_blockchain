@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type Hash [32]byte
@@ -28,7 +30,7 @@ type Block struct {
 	Payload []SignedTx  `json:"payload"`
 }
 
-func NewBlock(parentHash Hash, num uint64, nonce uint32, payload []SignedTx, miner Account) Block {
+func NewBlock(parentHash Hash, num uint64, nonce uint32, payload []SignedTx, miner common.Address) Block {
 	h := BlockHeader{
 		ParentHash: parentHash,
 		Number:     num,
@@ -43,11 +45,11 @@ func NewBlock(parentHash Hash, num uint64, nonce uint32, payload []SignedTx, min
 }
 
 type BlockHeader struct {
-	ParentHash Hash    `json:"parentHash"`
-	Number     uint64  `json:"number"`
-	Nonce      uint32  `json:"nonce"`
-	Time       uint64  `json:"time"`
-	Miner      Account `json:"miner"`
+	ParentHash Hash           `json:"parentHash"`
+	Number     uint64         `json:"number"`
+	Nonce      uint32         `json:"nonce"`
+	Time       uint64         `json:"time"`
+	Miner      common.Address `json:"miner"`
 }
 
 func (b Block) Hash() (Hash, error) {
@@ -67,8 +69,8 @@ type BlockFS struct {
 func IsValidBlock(h Hash) bool {
 	return fmt.Sprintf("%x", h[0]) == "0" &&
 		fmt.Sprintf("%x", h[1]) == "0" &&
-		fmt.Sprintf("%x", h[2]) == "0" &&
+		// fmt.Sprintf("%x", h[2]) == "0" &&
 		// fmt.Sprintf("%x", h[3]) == "0" &&
 		// not equal to zero
-		fmt.Sprintf("%x", h[3]) != "0"
+		fmt.Sprintf("%x", h[2]) != "0"
 }

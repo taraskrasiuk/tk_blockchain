@@ -1,0 +1,8 @@
+{
+  "genesis_time": "2025-05-19T20:01:12+03:00",
+  "chain_id": "bb ledger",
+  "balances": {
+    "0xe3e1aff79a367675be32e76b63866ebd565f2b4a": 10000,
+    "0xc9849c4f99c1a4a8fa57f0a6032f5e094acadeab": 1000
+  }
+}

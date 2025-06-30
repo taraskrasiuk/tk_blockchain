@@ -79,18 +79,19 @@ func (h *HttpNodeHandler) handlerTxAddRequest(w http.ResponseWriter, r *http.Req
 	}
 	defer r.Body.Close()
 
-	var (
-		from = database.NewAccount(txReqBody.From)
-		to   = database.NewAccount(txReqBody.To)
-	)
-	tx := database.NewTx(from, to, txReqBody.Data, txReqBody.Value)
+	tx := database.NewTx(database.NewAccount(txReqBody.From), database.NewAccount(txReqBody.To), txReqBody.Data, txReqBody.Value)
 	txHash, err := tx.Hash()
 	if err != nil {
 		writeErr(w, http.StatusBadRequest, "could not create a new pending transcation"+err.Error())
 		return
 	}
 	// create a signed transaction
-	signedTx, err := wallet.SignTxWithKeystoreAccount(*tx, from, txReqBody.FromPWD, wallet.GetKeystoreDirPath(h.node.Dirname()))
+	fmt.Println(txReqBody.FromPWD, h.node.Dirname())
+	signedTx, err := wallet.SignTxWithKeystoreAccount(*tx, database.NewAccount(txReqBody.From), txReqBody.FromPWD, wallet.GetKeystoreDirPath(h.node.Dirname()))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "could not sign a new transaction due to: "+err.Error())
+		return
+	}
 	if err := h.node.AddPendingTX(signedTx); err != nil {
 		writeErr(w, http.StatusBadRequest, "could not create a new transaction due to: "+err.Error())
 		return
@@ -130,6 +131,12 @@ func (h *HttpNodeHandler) handlerAddPeer(w http.ResponseWriter, r *http.Request)
 		Error   string `json:"error"`
 	}
 	writeJSON(w, http.StatusOK, &successRes{true, ""})
+}
+
+// WALLET
+// ==== GET /wallet/accounts
+func (h *HttpNodeHandler) handlerWalletAccounts(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, h.node.WalletAccounts())
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, v any) error {

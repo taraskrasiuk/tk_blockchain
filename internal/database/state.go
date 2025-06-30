@@ -12,9 +12,7 @@ import (
 )
 
 type State struct {
-	Balances map[Account]uint
-	// txMempool []SignedTx
-
+	Balances        map[common.Address]uint
 	blockFile       *os.File
 	lastBlock       Block
 	lastBlockHash   Hash
@@ -23,7 +21,7 @@ type State struct {
 
 func NewState(dirname string, hasGenesisBlock bool) (*State, error) {
 	s := State{
-		Balances:        make(map[Account]uint),
+		Balances:        make(map[common.Address]uint),
 		hasGenesisBlock: hasGenesisBlock,
 		lastBlockHash:   Hash{},
 	}
@@ -44,14 +42,6 @@ func NewState(dirname string, hasGenesisBlock bool) (*State, error) {
 func (s *State) Close() error {
 	return s.blockFile.Close()
 }
-
-// func (s *State) Add(tx SignedTx) error {
-// 	if err := applyTx(tx, s); err != nil {
-// 		return err
-// 	}
-// 	s.txMempool = append(s.txMempool, tx)
-// 	return nil
-// }
 
 func (s *State) AddBlock(b Block) (Hash, error) {
 	// make a temporary copy of the state, in order to avoid race conditions
@@ -94,37 +84,6 @@ func (s *State) AddBlock(b Block) (Hash, error) {
 
 	return blockHash, nil
 }
-
-// func (s *State) GetMemPool() []SignedTx {
-// 	return s.txMempool
-// }
-
-// func (s *State) Persist(miner Account) (Hash, error) {
-// 	// create a new block, and set a parent block's hash
-// 	b := NewBlock(s.lastBlockHash, s.lastBlock.Header.Number+1, 0x0123, s.txMempool, miner)
-// 	bhash, err := b.Hash()
-// 	if err != nil {
-// 		return Hash{}, err
-// 	}
-// 	blockFs := &BlockFS{
-// 		Key:   bhash,
-// 		Value: b,
-// 	}
-// 	// encode block to json
-// 	jsonBlock, err := json.Marshal(blockFs)
-// 	if err != nil {
-// 		return Hash{}, err
-// 	}
-
-// 	if _, err := s.blockFile.Write(append(jsonBlock, '\n')); err != nil {
-// 		return Hash{}, err
-// 	}
-
-// 	s.lastBlockHash = bhash
-// 	s.lastBlock = blockFs.Value
-
-// 	return bhash, nil
-// }
 
 func (s *State) GetLastHash() *Hash {
 	return &s.lastBlockHash
@@ -230,7 +189,6 @@ func (s *State) loadGenesisFile(dirname string) error {
 		ChainID     string                  `json:"chain_id"`
 		Balances    map[common.Address]uint `json:"balances"`
 	}
-
 	var genesisData genesisResource
 	err = json.Unmarshal(res, &genesisData)
 	if err != nil {
@@ -238,7 +196,7 @@ func (s *State) loadGenesisFile(dirname string) error {
 	}
 	// set a balances to state
 	for k, v := range genesisData.Balances {
-		s.Balances[Account(k)] = v
+		s.Balances[common.Address(k)] = v
 	}
 
 	return nil
@@ -248,16 +206,12 @@ func (s *State) copy() State {
 	newState := State{}
 	newState.lastBlockHash = s.lastBlockHash
 	newState.lastBlock = s.lastBlock
-	// newState.txMempool = make([]Tx, len(s.txMempool))
-	newState.Balances = make(map[Account]uint)
+	newState.Balances = make(map[common.Address]uint)
 
 	for acc, balance := range s.Balances {
 		newState.Balances[acc] = balance
 	}
 
-	// for _, tx := range s.txMempool {
-	// 	newState.txMempool = append(newState.txMempool, tx)
-	// }
 	return newState
 }
 
@@ -286,7 +240,6 @@ func applyTXs(txs []SignedTx, s *State) error {
 		if err := applyTx(tx, s); err != nil {
 			return err
 		}
-		// s.txMempool = append(s.txMempool, tx)
 	}
 	return nil
 }

@@ -58,9 +58,10 @@ func SignTx(tx database.Tx, pk *ecdsa.PrivateKey) (database.SignedTx, error) {
 }
 
 // Helper, sign a transaction based on provided password and keystore directory, in order to find an account
-func SignTxWithKeystoreAccount(tx database.Tx, acc database.Account, pass, keydir string) (database.SignedTx, error) {
+func SignTxWithKeystoreAccount(tx database.Tx, acc common.Address, pass, keydir string) (database.SignedTx, error) {
 	ks := keystore.NewKeyStore(keydir, keystore.StandardScryptN, keystore.StandardScryptP)
-	foundedAcc, err := ks.Find(accounts.Account{Address: common.Address(acc)})
+	fmt.Println(ks.Accounts(), acc, keydir)
+	foundedAcc, err := ks.Find(accounts.Account{Address: acc})
 	if err != nil {
 		return database.SignedTx{}, err
 	}

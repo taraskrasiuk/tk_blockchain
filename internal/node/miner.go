@@ -7,6 +7,8 @@ import (
 	"math/rand"
 	"taraskrasiuk/blockchain_l/internal/database"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type PendingBlock struct {
@@ -14,10 +16,10 @@ type PendingBlock struct {
 	number uint64
 	time   uint64
 	txs    []database.SignedTx
-	miner  database.Account
+	miner  common.Address
 }
 
-func NewPendingBlock(h database.Hash, n uint64, txs []database.SignedTx, miner database.Account) *PendingBlock {
+func NewPendingBlock(h database.Hash, n uint64, txs []database.SignedTx, miner common.Address) *PendingBlock {
 	return &PendingBlock{h, n, uint64(time.Now().UnixMilli()), txs, miner}
 }
 
