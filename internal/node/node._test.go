@@ -362,3 +362,72 @@ func TestNode_Forged(t *testing.T) {
 		t.Fatalf("forged tx succeeded, expected balance should be %d but got %d", 1000+txValue, n.state.Balances[acc2])
 	}
 }
+
+func TestNode_MiningSpamTransactions(t *testing.T) {
+	MINE_PENDING_INTERVAL = 10 * time.Second
+
+	accounts := setup()
+	defer clear()
+
+	miner := accounts[0].Address
+	peerNode := NewPeerNode("localhost", 8080, true, true)
+	n := NewNode(testDir, 8081, "localhost", peerNode, miner, true)
+
+	pctx := context.Background()
+	ctx, cancel := context.WithTimeout(pctx, 20*time.Minute)
+	defer cancel()
+
+	var (
+		acc1                = accounts[0].Address
+		acc2                = accounts[1].Address
+		txValue             = uint(100)
+		txCount             = 5
+		initialBalance uint = 1000
+		wg                  = sync.WaitGroup{}
+	)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for i := 0; i < txCount; i++ {
+			tx1 := database.NewTx(acc1, acc2, "", txValue, uint(i+1))
+			validSignedTx1, err := wallet.SignTxWithKeystoreAccount(*tx1, acc1, passphrase1, wallet.GetKeystoreDirPath(n.Dirname()))
+			if err != nil {
+				t.Fatal(err)
+				return
+			}
+			if err := n.AddPendingTX(validSignedTx1); err != nil {
+				t.Fatal(err)
+				return
+			}
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		ticker := time.NewTicker(1 * time.Minute)
+		select {
+		case <-ticker.C:
+			n.Close()
+			return
+		}
+	}()
+
+	if err := n.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	wg.Wait()
+
+	var expectedAcc1Balance uint = initialBalance + database.MinerReward - txValue*uint(txCount)
+	var expectedAcc2Balance uint = initialBalance + txValue*uint(txCount)
+
+	if n.state.Balances[acc1] != expectedAcc1Balance {
+		t.Fatalf("expected balance for account 1 should be %d but got %d", expectedAcc1Balance, n.state.Balances[acc1])
+	}
+	if n.state.Balances[acc2] != expectedAcc2Balance {
+		t.Fatalf("expected balance for account 1 should be %d but got %d", expectedAcc2Balance, n.state.Balances[acc2])
+	}
+}

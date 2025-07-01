@@ -37,6 +37,7 @@ type Node struct {
 	miner             common.Address
 	// public
 	IsBootstrap bool
+	done        chan struct{}
 }
 
 // TODO: remove hasGenesisFile
@@ -52,6 +53,7 @@ func NewNode(datadir string, port uint, ip string, bootstrap *PeerNode, miner co
 		newSyncedBlocksCh: make(chan database.Block),
 		isMining:          false,
 		miner:             miner,
+		done:              make(chan struct{}, 1),
 	}
 
 	if bootstrap != nil {
@@ -73,14 +75,24 @@ func (n *Node) Run(ctx context.Context) error {
 	// assign a state to node
 	n.state = state
 	// run sync
-	go n.sync(ctx)
-	go n.mine(ctx)
+	go func() {
+		n.sync(ctx)
+	}()
+	go func() {
+		n.mine(ctx)
+	}()
+	<-n.done
 
 	return nil
 }
 
 func (n *Node) Close() error {
-	return n.state.Close()
+	fmt.Println("Closing node...")
+	if err := n.state.Close(); err != nil {
+		return err
+	}
+	n.done <- struct{}{}
+	return nil
 }
 
 func (n *Node) sync(ctx context.Context) {
@@ -91,6 +103,8 @@ func (n *Node) sync(ctx context.Context) {
 			n.doSync(ctx)
 		case <-ctx.Done():
 			t.Stop()
+			return
+		case <-n.done:
 			return
 		}
 	}
@@ -262,6 +276,9 @@ func (n *Node) mine(ctx context.Context) error {
 	)
 	for {
 		select {
+		case <-n.done:
+			ticker.Stop()
+			return nil
 		// handle ticker case
 		case <-ticker.C:
 			go func() {

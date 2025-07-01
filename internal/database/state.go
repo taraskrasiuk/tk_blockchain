@@ -11,8 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var (
-	reward uint = 175
+const (
+	MinerReward uint = 175
+	TxFee       uint = 50
 )
 
 type State struct {
@@ -92,7 +93,9 @@ func (s *State) AddBlock(b Block) (Hash, error) {
 
 	// reward for miner
 	logger.Printf("adjust miner reward for %s", b.Header.Miner)
-	s.Balances[b.Header.Miner] += reward
+	s.Balances[b.Header.Miner] += MinerReward
+	// add Gas Fee
+	s.Balances[b.Header.Miner] += uint(len(b.Payload)) * TxFee
 
 	logger.Println("done adding a block")
 
@@ -286,10 +289,12 @@ func applyTx(tx SignedTx, s *State) error {
 		return nil
 	}
 
-	if s.Balances[tx.From] < tx.Value {
+	txCost := tx.Value + TxFee
+
+	if s.Balances[tx.From] < txCost {
 		return fmt.Errorf("wrong TX, cant perform transaction. \n From: %s, To: %s, Value: %d \n", tx.From, tx.To, tx.Value)
 	}
-	s.Balances[tx.From] -= tx.Value
+	s.Balances[tx.From] -= txCost
 
 	if _, ok := s.Balances[tx.To]; !ok {
 		s.Balances[tx.To] = 0
