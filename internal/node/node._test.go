@@ -3,32 +3,51 @@ package node
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"taraskrasiuk/blockchain_l/internal/database"
+	"taraskrasiuk/blockchain_l/internal/wallet"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 )
 
+var (
+	testDir     = "ttest"
+	passphrase1 = "qwe123QWE!@#"
+	passphrase2 = "qwe123QWE!@#"
+)
+
+func setupMockAccounts(pwds ...string) ([]accounts.Account, error) {
+	keystore := keystore.NewKeyStore(testDir+"/keystore", keystore.StandardScryptN, keystore.StandardScryptP)
+	var res []accounts.Account
+	for _, pwd := range pwds {
+		acc, err := keystore.NewAccount(pwd)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, acc)
+	}
+	return res, nil
+}
+
 // change db files which state uses.
-func setupMockGenesisDBFile(filename string) error {
-	content := `{
-			"genesis_time": "2019-03-18T00:00:00.000000000Z",
-		    "chain_id": "the-blockchain-bar-ledger",
-		    "balances": {
-		        "andrej": 1000000
-		    }
-		}`
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDWR, 0644)
-	defer f.Close()
+func setupMockGenesisDBFile(filename string) ([]accounts.Account, error) {
+	accs, err := setupMockAccounts(passphrase1, passphrase2)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	_, err = f.Write([]byte(content))
-	if err != nil {
-		return err
+	gen := database.NewGenesisResource()
+	for _, acc := range accs {
+		gen.AddAccount(acc.Address.Hex(), 1000)
 	}
-	return nil
+	if err := gen.SaveToFile(filename); err != nil {
+		return nil, err
+	}
+	return accs, nil
 }
 
 func setupMockTxDBFile(filename string) error {
@@ -46,14 +65,18 @@ func setupMockTxDBFile(filename string) error {
 	return nil
 }
 
-func setup() {
+func setup() []accounts.Account {
 	if err := os.Mkdir(testDir, 0777); err != nil {
 		panic(err)
 	}
-	if err := setupMockGenesisDBFile(testDir + "/genesis.json"); err != nil {
+	if err := os.Mkdir(testDir+"/database", 0777); err != nil {
 		panic(err)
 	}
-
+	if accs, err := setupMockGenesisDBFile(testDir + "/database/genesis.json"); err != nil {
+		panic(err)
+	} else {
+		return accs
+	}
 }
 
 func clear() {
@@ -61,8 +84,6 @@ func clear() {
 		panic(err)
 	}
 }
-
-var testDir = "ttest"
 
 func TestNode_Run(t *testing.T) {
 	setup()
@@ -80,25 +101,36 @@ func TestNode_Run(t *testing.T) {
 }
 
 func TestNode_Mining(t *testing.T) {
-	setup()
+	accounts := setup()
 	defer clear()
 
-	miner := database.NewAccount("miner")
+	miner := accounts[0].Address
 	peerNode := NewPeerNode("localhost", 8080, true, true)
 	n := NewNode(testDir, 8081, "localhost", peerNode, miner, true)
+
 	pctx := context.Background()
-	ctx, cancel := context.WithTimeout(pctx, 60*time.Second)
+	ctx, cancel := context.WithTimeout(pctx, 20*time.Minute)
 	defer cancel()
 
-	var wg sync.WaitGroup
+	var (
+		acc1 = accounts[0].Address
+		acc2 = accounts[1].Address
+		wg   = sync.WaitGroup{}
+	)
+
 	wg.Add(3)
 	// create 1 transaction
 	go func() {
 		defer wg.Done()
 		time.Sleep(2 * time.Second)
-		tx := database.NewSignedTx(*database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 100), []byte{})
+		tx := database.NewTx(acc1, acc2, "", 100)
 
-		if err := n.AddPendingTX(*tx); err != nil {
+		signedTx, err := wallet.SignTxWithKeystoreAccount(*tx, acc1, passphrase1, wallet.GetKeystoreDirPath(n.Dirname()))
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if err := n.AddPendingTX(signedTx); err != nil {
 			panic(err)
 		}
 	}()
@@ -106,9 +138,13 @@ func TestNode_Mining(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		time.Sleep(6 * time.Second)
-		tx := database.NewSignedTx(*database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 300), []byte{})
+		tx := database.NewTx(acc1, acc2, "", 300)
 
-		if err := n.AddPendingTX(*tx); err != nil {
+		signedTx, err := wallet.SignTxWithKeystoreAccount(*tx, acc1, passphrase1, wallet.GetKeystoreDirPath(n.Dirname()))
+		if err != nil {
+			log.Fatal(err)
+		}
+		if err := n.AddPendingTX(signedTx); err != nil {
 			panic(err)
 		}
 	}()
@@ -142,21 +178,35 @@ func TestNode_Mining(t *testing.T) {
 
 func TestNode_MiningStopsOnNewSyncedBlock(t *testing.T) {
 	MINE_PENDING_INTERVAL = 10 * time.Second
-	setup()
+	accounts := setup()
 	defer clear()
-	var wg sync.WaitGroup
 
-	tarasAcc := database.NewAccount("taras")
-	p := NewPeerNode("localhost", 8080, true, false)
-	n := NewNode(testDir, 8081, "localhost", p, tarasAcc, true)
+	miner := accounts[0].Address
+	peerNode := NewPeerNode("localhost", 8080, true, true)
+	n := NewNode(testDir, 8081, "localhost", peerNode, miner, true)
 
-	tx1 := database.NewSignedTx(*database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 100), []byte{})
-	tx2 := database.NewSignedTx(*database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 5), []byte{})
-	tx2Hash, _ := tx2.Hash()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	pctx := context.Background()
+	ctx, cancel := context.WithTimeout(pctx, 20*time.Minute)
 	defer cancel()
 
-	firstPendingBlock := NewPendingBlock(database.Hash{}, 0, []database.SignedTx{*tx1}, tarasAcc)
+	var (
+		acc1 = accounts[0].Address
+		acc2 = accounts[1].Address
+		wg   = sync.WaitGroup{}
+	)
+	tx1 := database.NewTx(acc1, acc2, "", 100)
+	signedTx1, err := wallet.SignTxWithKeystoreAccount(*tx1, acc1, passphrase1, wallet.GetKeystoreDirPath(n.Dirname()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx2 := database.NewTx(acc1, acc2, "", 200)
+	signedTx2, err := wallet.SignTxWithKeystoreAccount(*tx2, acc1, passphrase1, wallet.GetKeystoreDirPath(n.Dirname()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx2Hash, _ := tx2.Hash()
+
+	firstPendingBlock := NewPendingBlock(database.Hash{}, 0, []database.SignedTx{signedTx1}, acc1)
 	validSyncedBlock, err := Mine(ctx, firstPendingBlock)
 	if err != nil {
 		t.Fatal(err)
@@ -165,11 +215,11 @@ func TestNode_MiningStopsOnNewSyncedBlock(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		time.Sleep(MINE_PENDING_INTERVAL - (MINE_PENDING_INTERVAL / 4))
-		err := n.AddPendingTX(*tx1)
+		err := n.AddPendingTX(signedTx1)
 		if err != nil {
 			panic(err)
 		}
-		err = n.AddPendingTX(*tx2)
+		err = n.AddPendingTX(signedTx2)
 		if err != nil {
 			panic(err)
 		}
@@ -227,8 +277,8 @@ func TestNode_MiningStopsOnNewSyncedBlock(t *testing.T) {
 		t.Fatalf("expected a block heaight to be 1 but got %d", n.state.GetLastBlock().Header.Number)
 	}
 	// check miner balance
-	balance := n.state.Balances[tarasAcc]
-	expectedBalance := 105 + 175 + 175
+	balance := n.state.Balances[acc1]
+	expectedBalance := 1000 - 100 - 200 + 175 + 175
 	if balance != uint(expectedBalance) /* with 2 rewards */ {
 		t.Fatalf("expected balance for miner account to be %d but got %d", expectedBalance, balance)
 	}

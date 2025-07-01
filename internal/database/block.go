@@ -69,8 +69,8 @@ type BlockFS struct {
 func IsValidBlock(h Hash) bool {
 	return fmt.Sprintf("%x", h[0]) == "0" &&
 		fmt.Sprintf("%x", h[1]) == "0" &&
-		// fmt.Sprintf("%x", h[2]) == "0" &&
+		fmt.Sprintf("%x", h[2]) == "0" &&
 		// fmt.Sprintf("%x", h[3]) == "0" &&
 		// not equal to zero
-		fmt.Sprintf("%x", h[2]) != "0"
+		fmt.Sprintf("%x", h[3]) != "0"
 }
