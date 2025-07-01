@@ -22,12 +22,13 @@ type Tx struct {
 	Value     uint           `json:"value"`
 	Data      string         `json:"data"`
 	CreatedAt string         `json:"createdAt"`
+	Nonce     uint           `json:"nonce"`
 }
 
-func NewTx(from, to common.Address, data string, value uint) *Tx {
+func NewTx(from, to common.Address, data string, value uint, nonce uint) *Tx {
 	createdAt := time.Now().Format(time.RFC3339)
 
-	return &Tx{from, to, value, data, createdAt}
+	return &Tx{from, to, value, data, createdAt, nonce}
 }
 
 func (t *Tx) Hash() (Hash, error) {

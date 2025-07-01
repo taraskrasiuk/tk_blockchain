@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var testDbDir = "test-dir"
@@ -49,11 +51,12 @@ func setup() error {
 	// change original filenames which state uses
 	genesisFile = "utest_" + genesisFile
 	blocksFile = "utest_" + blocksFile
+	acc := common.HexToAddress("miner")
 
 	s, _ := NewState(testDbDir, true)
 	block0 := NewBlock(Hash{}, 1, 0x0123, []SignedTx{
-		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "", 3), []byte{}),
-		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 700), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "", 3, s.NextAccountNonce(acc)), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 700, s.NextAccountNonce(acc)), []byte{}),
 	}, NewAccount("miner"))
 	s.AddBlock(block0)
 	block0Hash, err := s.AddBlock(block0)
@@ -61,12 +64,12 @@ func setup() error {
 		log.Fatal(err)
 	}
 	block1 := NewBlock(block0Hash, 2, 0x0123, []SignedTx{
-		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("babayaga"), "", 2000), []byte{}),
-		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 100), []byte{}),
-		*NewSignedTx(*NewTx(NewAccount("babayaga"), NewAccount("andrej"), "", 1), []byte{}),
-		*NewSignedTx(*NewTx(NewAccount("babayaga"), NewAccount("caesar"), "", 1000), []byte{}),
-		*NewSignedTx(*NewTx(NewAccount("babayaga"), NewAccount("andrej"), "", 50), []byte{}),
-		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 600), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("babayaga"), "", 2000, s.NextAccountNonce(acc)), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 100, s.NextAccountNonce(acc)), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("babayaga"), NewAccount("andrej"), "", 1, s.NextAccountNonce(acc)), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("babayaga"), NewAccount("caesar"), "", 1000, s.NextAccountNonce(acc)), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("babayaga"), NewAccount("andrej"), "", 50, s.NextAccountNonce(acc)), []byte{}),
+		*NewSignedTx(*NewTx(NewAccount("andrej"), NewAccount("andrej"), "reward", 600, s.NextAccountNonce(acc)), []byte{}),
 	}, NewAccount("miner"))
 	s.AddBlock(block1)
 	return nil

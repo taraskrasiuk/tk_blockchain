@@ -327,6 +327,11 @@ func (n *Node) processPendingTXs(ctx context.Context) error {
 	return nil
 }
 
+// TODO: duplicate from state
+func (n *Node) NextAccountNonce(acc common.Address) uint {
+	return n.state.NextAccountNonce(acc)
+}
+
 func (n *Node) AddPendingTX(tx database.SignedTx) error {
 	// if err := n.state.IsValidTX(tx); err != nil {
 	// 	return err

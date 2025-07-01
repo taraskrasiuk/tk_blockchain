@@ -123,7 +123,7 @@ func TestNode_Mining(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		time.Sleep(2 * time.Second)
-		tx := database.NewTx(acc1, acc2, "", 100)
+		tx := database.NewTx(acc1, acc2, "", 100, n.state.NextAccountNonce(acc1))
 
 		signedTx, err := wallet.SignTxWithKeystoreAccount(*tx, acc1, passphrase1, wallet.GetKeystoreDirPath(n.Dirname()))
 		if err != nil {
@@ -138,7 +138,7 @@ func TestNode_Mining(t *testing.T) {
 	go func() {
 		defer wg.Done()
 		time.Sleep(6 * time.Second)
-		tx := database.NewTx(acc1, acc2, "", 300)
+		tx := database.NewTx(acc1, acc2, "", 300, n.state.NextAccountNonce(acc1))
 
 		signedTx, err := wallet.SignTxWithKeystoreAccount(*tx, acc1, passphrase1, wallet.GetKeystoreDirPath(n.Dirname()))
 		if err != nil {
@@ -194,12 +194,12 @@ func TestNode_MiningStopsOnNewSyncedBlock(t *testing.T) {
 		acc2 = accounts[1].Address
 		wg   = sync.WaitGroup{}
 	)
-	tx1 := database.NewTx(acc1, acc2, "", 100)
+	tx1 := database.NewTx(acc1, acc2, "", 100, n.state.NextAccountNonce(acc1))
 	signedTx1, err := wallet.SignTxWithKeystoreAccount(*tx1, acc1, passphrase1, wallet.GetKeystoreDirPath(n.Dirname()))
 	if err != nil {
 		t.Fatal(err)
 	}
-	tx2 := database.NewTx(acc1, acc2, "", 200)
+	tx2 := database.NewTx(acc1, acc2, "", 200, n.state.NextAccountNonce(acc1))
 	signedTx2, err := wallet.SignTxWithKeystoreAccount(*tx2, acc1, passphrase1, wallet.GetKeystoreDirPath(n.Dirname()))
 	if err != nil {
 		t.Fatal(err)
@@ -281,5 +281,84 @@ func TestNode_MiningStopsOnNewSyncedBlock(t *testing.T) {
 	expectedBalance := 1000 - 100 - 200 + 175 + 175
 	if balance != uint(expectedBalance) /* with 2 rewards */ {
 		t.Fatalf("expected balance for miner account to be %d but got %d", expectedBalance, balance)
+	}
+}
+
+func TestNode_Forged(t *testing.T) {
+	MINE_PENDING_INTERVAL = 10 * time.Second
+
+	accounts := setup()
+	defer clear()
+
+	miner := accounts[0].Address
+	peerNode := NewPeerNode("localhost", 8080, true, true)
+	n := NewNode(testDir, 8081, "localhost", peerNode, miner, true)
+
+	pctx := context.Background()
+	ctx, cancel := context.WithTimeout(pctx, 20*time.Minute)
+	defer cancel()
+
+	var (
+		acc1 = accounts[0].Address
+		acc2 = accounts[1].Address
+		wg   = sync.WaitGroup{}
+	)
+	txValue := uint(25)
+
+	tx1 := database.NewTx(acc1, acc2, "", txValue, 1)
+	validSignedTx1, err := wallet.SignTxWithKeystoreAccount(*tx1, acc1, passphrase1, wallet.GetKeystoreDirPath(n.Dirname()))
+	if err != nil {
+		t.Fatal(err)
+		return
+	}
+	if err := n.AddPendingTX(validSignedTx1); err != nil {
+		t.Fatal(err)
+		return
+	}
+
+	wg.Add(1)
+
+	go func() {
+		defer wg.Done()
+		ticker := time.NewTicker(MINE_PENDING_INTERVAL + time.Second)
+		wasForgedTxAdded := false
+		for {
+			select {
+			case <-ticker.C:
+				fmt.Println(wasForgedTxAdded, n.isMining)
+				if wasForgedTxAdded && !n.isMining {
+					if err := n.Close(); err != nil {
+						t.Fatal(err)
+					}
+					return
+				}
+				if !wasForgedTxAdded {
+					// create a forged transaction with a signature from first transaction
+					fmt.Println("running forged .... ")
+					forgedTx := database.NewTx(acc1, acc2, "", txValue, 2)
+					signedForgedTx := database.NewSignedTx(*forgedTx, validSignedTx1.Sig)
+					if err := n.AddPendingTX(*signedForgedTx); err != nil {
+						t.Fatal(err)
+						return
+					}
+					wasForgedTxAdded = true
+					time.Sleep(MINE_PENDING_INTERVAL + time.Second)
+				}
+			}
+		}
+	}()
+	if err := n.Run(ctx); err != nil {
+		t.Fatal(err)
+	}
+	wg.Wait()
+
+	// if n.state.GetLastBlock().Header.Number != 0 {
+	// 	t.Fatalf("expected only one block to be mined, but latest block header is %d", n.state.GetLastBlock().Header.Number)
+	// }
+	for k, v := range n.state.Balance() {
+		fmt.Printf("%s : %d\n", k.Hex(), v)
+	}
+	if n.state.Balances[acc2] != 1000+txValue {
+		t.Fatalf("forged tx succeeded, expected balance should be %d but got %d", 1000+txValue, n.state.Balances[acc2])
 	}
 }

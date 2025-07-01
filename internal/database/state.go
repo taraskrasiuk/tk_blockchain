@@ -11,8 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+var (
+	reward uint = 175
+)
+
 type State struct {
 	Balances        map[common.Address]uint
+	Account2Nonce   map[common.Address]uint
 	blockFile       *os.File
 	lastBlock       Block
 	lastBlockHash   Hash
@@ -22,6 +27,7 @@ type State struct {
 func NewState(dirname string, hasGenesisBlock bool) (*State, error) {
 	s := State{
 		Balances:        make(map[common.Address]uint),
+		Account2Nonce:   make(map[common.Address]uint),
 		hasGenesisBlock: hasGenesisBlock,
 		lastBlockHash:   Hash{},
 	}
@@ -37,6 +43,14 @@ func NewState(dirname string, hasGenesisBlock bool) (*State, error) {
 		return nil, err
 	}
 	return &s, nil
+}
+
+func (s *State) Balance() map[common.Address]uint {
+	res := make(map[common.Address]uint)
+	for k, v := range s.Balances {
+		res[k] = v
+	}
+	return res
 }
 
 func (s *State) Close() error {
@@ -78,7 +92,7 @@ func (s *State) AddBlock(b Block) (Hash, error) {
 
 	// reward for miner
 	logger.Printf("adjust miner reward for %s", b.Header.Miner)
-	s.Balances[b.Header.Miner] += 175 // mock reward
+	s.Balances[b.Header.Miner] += reward
 
 	logger.Println("done adding a block")
 
@@ -207,6 +221,7 @@ func (s *State) copy() State {
 	newState.lastBlockHash = s.lastBlockHash
 	newState.lastBlock = s.lastBlock
 	newState.Balances = make(map[common.Address]uint)
+	newState.Account2Nonce = make(map[common.Address]uint)
 
 	for acc, balance := range s.Balances {
 		newState.Balances[acc] = balance
@@ -218,6 +233,13 @@ func (s *State) copy() State {
 func (s *State) NextBlockNumber() uint64 {
 	lastBlockNum := s.lastBlock.Header.Number
 	return lastBlockNum + 1
+}
+
+func (s *State) NextAccountNonce(acc common.Address) uint {
+	if _, ok := s.Account2Nonce[acc]; !ok {
+		return 1
+	}
+	return s.Account2Nonce[acc] + 1
 }
 
 // Add block to state, and apply all block's transactions to the current state txMempool.
@@ -273,6 +295,16 @@ func applyTx(tx SignedTx, s *State) error {
 		s.Balances[tx.To] = 0
 	}
 	s.Balances[tx.To] += tx.Value
+	fmt.Println(" ---- applyTx")
+	for k, v := range s.Balances {
+		fmt.Printf("%s : %d\n", k.Hex(), v)
+	}
 
+	fmt.Println(" \n END ---- applyTx")
+	fmt.Println("is true ---- ", s.Account2Nonce == nil)
+	if _, ok := s.Account2Nonce[tx.From]; !ok {
+		fmt.Println("NO account", tx.From, tx.Nonce)
+	}
+	s.Account2Nonce[tx.From] = tx.Nonce
 	return nil
 }

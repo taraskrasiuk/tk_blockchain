@@ -10,7 +10,7 @@ import (
 func createRandomPendingBlock() *PendingBlock {
 	minerAcc := database.NewAccount("test")
 	return NewPendingBlock(database.Hash{}, 0, []database.SignedTx{
-		*database.NewSignedTx(*database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 3), []byte{}),
+		*database.NewSignedTx(*database.NewTx(database.NewAccount("andrej"), database.NewAccount("taras"), "", 3, 1), []byte{}),
 	}, minerAcc)
 }
 
